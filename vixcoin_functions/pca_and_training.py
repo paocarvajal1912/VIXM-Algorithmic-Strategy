@@ -1,4 +1,4 @@
-# Vixm Principal Compenents and Training Functions
+# Vixm Principal Components and Training Functions
 
 import pandas as pd
 import numpy as np
