@@ -82,6 +82,9 @@ def correlation_filter(series, min_corr=0.20, key_column='VIXM', eliminate_first
     return filtered_series
 
 
+
+# Univariate retrievals (one ticker)
+
 def retrieve_yahoo_close(ticker = 'spy', start_date = '2011-02-01', end_date = '2021-11-29'):
     
     """
@@ -113,7 +116,7 @@ def retrieve_yahoo_close(ticker = 'spy', start_date = '2011-02-01', end_date = '
         print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
 
         
-# Define function to retrieve daily volume data from yahoo using ticker, start date and end date
+# Define function to retrieve one daily volume data from yahoo using ticker, start date and end date
 def retrieve_yahoo_volume(ticker = 'spy', start_date = '2007-07-02', end_date = '2021-10-01'):
 
     """
@@ -173,3 +176,24 @@ def retrieve_yahoo_put_options_volume(ticker = 'spy', date = '2007-07-02'):
     # handle exception
     except Exception as ex:
         print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
+
+        
+# Multi-tickers in a list retrieval
+        
+def retrieve_close_multiple_tickers(ticker_list):
+    """
+    This function retrieves close prices from Yahoo Finance for a ticker list
+    
+    Arg:
+    ticker_list: a list of tickers of the yahoo close prices to be retrieve
+    
+    Return:
+    A dictionary with close prices
+    """
+    close_prices_dict = {}
+    
+    for ticker in ticker_list:
+        close_price = retrieve_yahoo_close(ticker, start_date='2011-02-01', end_date='2021-11-17')
+        close_prices_dict[ticker] = close_price
+        close_prices_df=pd.DataFrame(close_prices_dict)
+    return close_prices_df
