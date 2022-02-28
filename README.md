@@ -22,7 +22,7 @@ An algorithmic trading strategy incursion to create the first volatility securit
     <li><a href="#usage">Usage</a></li>
     <li><a href="#model-specifications">Model Specifications</a></li>
       <ul>
-        <li><a href="#historical-context:-the-VIX-Predictor">Historical context: the VIX Predictor</a></li>
+        <li><a href="#prior project">Prior Project: the VIX Predictor</a></li>
       </ul>
       <ul>
         <li><a href="#adaboost-model-for-VIXM-trading-strategy">Adaboost model for VIXM trading strategy</a></li>
@@ -92,9 +92,9 @@ If you look to reuse the code, and do not have experience on jupyter lab, you ca
 <!-- Model Specifications -->
 ## Model Specifications
 
-#### Historical context: the VIX Predictor
+#### Prior project
 
-Our first attempt was to prdict the VIX Index in the [VIX Predictor project](https://github.com/Fintech-Collaboration/vixx-token-dapp). In that project, we tried a Neural Network model, and then an Adaboost model. The adaboost brought better results, with a 58% accuracy out of sample. We got 22 out of 217 features that contributed to the model. These were varied from Garch model conditional volatility predictions, squared returns, returns, and volume belonging to all sort of asset classes and global locations, as can be seen in the table below. In addition, weekly seasonality was also important.
+Our first attempt was to predict the VIX Index in the [VIX Predictor project](https://github.com/paocarvajal1912/vix_predictor). In that project, we tried a Neural Network model, and then an Adaboost model. The adaboost brought better results, with a 58% accuracy out of sample. We got 22 out of 217 features that contributed to the model. These were varied from Garch model conditional volatility predictions, squared returns, returns, and volume belonging to all sort of asset classes and global locations, as can be seen in the table below. In addition, weekly seasonality was also important.
 
 <img src="images/Features_importance.png" alt="Logo" width="1000" height="500">
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -158,8 +158,6 @@ Paola A. Carvajal Almeida - paola.antonieta@gmail.com
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
-Credit to creator of readme template. 
-* [README Template](https://github.com/othneildrew/Best-README-Template.git)
     
 Thanks to the other teams members that worked in both projects. Some parts of those README files have been taken in this one:
     
@@ -174,6 +172,9 @@ Thanks to the other teams members that worked in both projects. Some parts of th
 * [Prateek Sharma](https://www.linkedin.com/in/prateek-sharma-21a081180/) [@Github](https://github.com/puru444)
 * [Srini Goda](https://www.linkedin.com/in/srini-goda-2305644/) [@Github](https://github.com/your_username/repo_name)
 * [Jasmine Tengsico](https://www.linkedin.com/in/jasmine-tengsico-5030b0167/) [@Github](https://github.com/jtengsico)
+    
+**Credit to creator of readme template.**
+* [README Template](https://github.com/othneildrew/Best-README-Template.git)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
