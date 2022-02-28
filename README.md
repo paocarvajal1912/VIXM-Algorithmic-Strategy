@@ -22,10 +22,10 @@ An algorithmic trading strategy incursion to create the first volatility securit
     <li><a href="#usage">Usage</a></li>
     <li><a href="#model-specifications">Model Specifications</a></li>
       <ul>
-        <li><a href="#historical-context">Historical context: the VIX Predictor</a></li>
+        <li><a href="#historical-context:-the-VIX-Predictor">Historical context: the VIX Predictor</a></li>
       </ul>
       <ul>
-        <li><a href="#adaboot-model">Adaboost model for VIXM trading strategy</a></li>
+        <li><a href="#adaboost-model-for-VIXM-trading-strategy">Adaboost model for VIXM trading strategy</a></li>
       </ul>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -150,7 +150,7 @@ Paola A. Carvajal Almeida - paola.antonieta@gmail.com
 
 [Here is my LinkedIn profile](https://www.linkedin.com/in/paolacarvajal/)
     
-[Here is my portfolio in GitHub](https://github.com/paocarvajal1912](https://github.com/paocarvajal1912)
+[Here is my portfolio in GitHub](https://github.com/paocarvajal1912)
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
