@@ -22,7 +22,7 @@ An algorithmic trading strategy incursion to create the first volatility securit
     <li><a href="#usage">Usage</a></li>
     <li><a href="#model-specifications">Model Specifications</a></li>
       <ul>
-        <li><a href="#prior project">Prior Project: the VIX Predictor</a></li>
+        <li><a href="#prior-project">Prior Project: the VIX Predictor</a></li>
       </ul>
       <ul>
         <li><a href="#adaboost-model-for-VIXM-trading-strategy">Adaboost model for VIXM trading strategy</a></li>
