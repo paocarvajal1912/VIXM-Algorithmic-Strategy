@@ -9,26 +9,23 @@ An algorithmic trading strategy incursion to create the first volatility securit
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
+    <li> <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
+    <li> <a href="#getting-started">Getting Started</a>
       <ul>
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li>
-      <a href="#usage">Usage</a></li>
-    <li><a href="#Model Specifications">Model Specifications</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#model-specifications">Model Specifications</a></li>
       <ul>
-        <li><a href="#installation">Historical context: the VIX Predictor</a></li>
+        <li><a href="#historical-context">Historical context: the VIX Predictor</a></li>
       </ul>
       <ul>
-        <li><a href="#installation">Adaboost model for VIXM trading strategy</a></li>
+        <li><a href="#adaboot-model">Adaboost model for VIXM trading strategy</a></li>
       </ul>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -104,10 +101,10 @@ Our first attempt was to prdict the VIX Index in the [VIX Predictor project](htt
 
 However, the VIX Index is not investable. After we were able to see that it is possible to have capacity of prediction, we wanted to try a security that invest in the VIX. We selected ther VIXM because of having the larger history available. The next sub-section explains the model on VIXM in more detail.
 
-#### Now: Adaboost model for VIXM trading strategy
+#### Adaboost model for VIXM trading strategy
 This code is a marchine learning model to predict the sign of the return of the VIXM ETN for the next trading day.
 
-A series of tickers are defined in a list, and time series of daily prices and volumes are downloaded using the Yahoo Finance API for each of those tickers. With the prices, we generate additional time series and seasonal analysis. Additionally, to include historical effects of more than one day on the prediction of the value of the VIXM return tomorrow, we calculate principal components of the initial features, and add one week of daily lagged values in the features as well. 
+A series of tickers are defined in a list, and time series of daily prices and volumes are downloaded using the Yahoo Finance API for each of those tickers. With the prices, we generate additional time series and seasonal analysis. Additionally, to include historical effects of more than one day on the prediction of the VIXM return sign tomorrow, we calculate principal components of the initial features, and add one week of daily lagged values in the features as well. 
 
 The final list of features is as follows:
  * Close prices
@@ -149,9 +146,11 @@ https://github.com/git/git-scm.com/blob/main/MIT-LICENSE.txt)
 ## Contact
 <div align="left">
 
-Paola Carvajal- (https://www.linkedin.com/in/paolacarvajal/)
+Paola A. Carvajal Almeida - paola.antonieta@gmail.com
 
-  Project Link: [https://github.com/paocarvajal1912](https://github.com/paocarvajal1912)
+[Here is my LinkedIn profile](https://www.linkedin.com/in/paolacarvajal/)
+    
+[Here is my portfolio in GitHub](https://github.com/paocarvajal1912](https://github.com/paocarvajal1912)
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -162,8 +161,19 @@ Paola Carvajal- (https://www.linkedin.com/in/paolacarvajal/)
 Credit to creator of readme template. 
 * [README Template](https://github.com/othneildrew/Best-README-Template.git)
     
-The first version of this code was made to predict the VIX Index. It was the team lider of the project which results you can check 
-[here](https://github.com/paocarvajal1912/vix_predictor) and I work it together in the adaboost moel code with Sangram Singh - @Github - sangramsinghg@yahoo.com, which contributions where invaluable.
+Thanks to the other teams members that worked in both projects. Some parts of those README files have been taken in this one:
+    
+**VIX Predictor:**
+* Sangram Singh - [@Github](https://github.com/sangramsinghg)
+* Ahmed Mohamed - [@Github](https://github.com/Ahmed-Mahjoub)
+* Doreen Ngo - [@Github](https://github.com/ngomatterwhat)
+    
+**VIXCOIN**
+    
+* [Jason Garcia](https://www.linkedin.com/in/24-jason-j-garcia/) [@Github](https://github.com/jasonjgarcia24)
+* [Prateek Sharma](https://www.linkedin.com/in/prateek-sharma-21a081180/) [@Github](https://github.com/puru444)
+* [Srini Goda](https://www.linkedin.com/in/srini-goda-2305644/) [@Github](https://github.com/your_username/repo_name)
+* [Jasmine Tengsico](https://www.linkedin.com/in/jasmine-tengsico-5030b0167/) [@Github](https://github.com/jtengsico)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
