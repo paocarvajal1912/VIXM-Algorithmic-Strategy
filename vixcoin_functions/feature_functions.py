@@ -67,12 +67,19 @@ def garch_fit_and_predict(series, ticker, horizon=1, p=1, q=1, o=1, print_series
 def correlation_filter(series, min_corr=0.20, key_column='VIXM', eliminate_first_column=False):
     
     """
+    This function filters series that do not exceed the minimum correlation with the series defined in the key_column.
+    Series that have only missing values are also eliminated.
     
+    Args:
     
+    series     : a dataframe with time series to be filtered
+    min_corr   : a float number between -1 and 1 that indicated which is the minimum correlation to be included in the results
+    key_column : the name of the columns with which the level of correlation is measured
+    eliminate_first_column : option to exclude the first column from the results
     """
 
-    key_correlations=series.corr()[key_column]
-    to_keep_columns=key_correlations[abs(key_correlations)>=min_corr].index
+    key_correlations = series.corr()[key_column]
+    to_keep_columns  = key_correlations[abs(key_correlations)>=min_corr].index
     filtered_series=series[to_keep_columns]
     
     if eliminate_first_column==True:
@@ -180,12 +187,14 @@ def retrieve_yahoo_put_options_volume(ticker = 'spy', date = '2007-07-02'):
         
 # Multi-tickers in a list retrieval
         
-def retrieve_close_multiple_tickers(ticker_list):
+def retrieve_close_multiple_tickers(ticker_list, start_date, end_date):
     """
     This function retrieves close prices from Yahoo Finance for a ticker list
     
     Arg:
     ticker_list: a list of tickers of the yahoo close prices to be retrieve
+    start_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. 
+    end_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. 
     
     Return:
     A dictionary with close prices
@@ -193,7 +202,7 @@ def retrieve_close_multiple_tickers(ticker_list):
     close_prices_dict = {}
     
     for ticker in ticker_list:
-        close_price = retrieve_yahoo_close(ticker, start_date='2011-02-01', end_date='2021-11-17')
+        close_price = retrieve_yahoo_close(ticker, start_date=start_date, end_date=end_date)
         close_prices_dict[ticker] = close_price
         close_prices_df=pd.DataFrame(close_prices_dict)
     return close_prices_df
