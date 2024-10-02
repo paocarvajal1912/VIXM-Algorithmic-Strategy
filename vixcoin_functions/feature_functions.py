@@ -1,4 +1,5 @@
 
+from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 import pandas as pd
 from arch import arch_model
@@ -138,7 +139,7 @@ def retrieve_yahoo_volume(ticker: str = 'spy', start_date: str = '2007-07-02',
 
 
 def retrieve_yahoo_put_options_volume(ticker: str = 'spy', 
-                                      date: str = '2007-07-02') -> pd.Series:
+                                      date: str = '2024-09-27') -> pd.Series:
     """
     Retrieves intraday put options volume for a given day.
 
@@ -186,3 +187,29 @@ def retrieve_close_multiple_tickers(ticker_list: list, start_date: str,
 
     close_prices_df = pd.DataFrame(close_prices_dict)
     return close_prices_df
+
+
+def retrieve_volume(volume_list: List[str], start_date: str, end_date: str) -> Dict:
+    """Retrieves volume trades for a list of tickers."""
+    volume_dict = {}
+    for ticker in volume_list:
+        volume = retrieve_yahoo_volume(ticker, start_date=start_date, end_date=end_date)
+        volume_dict[ticker] = volume
+    return volume_dict
+
+
+def save_volume_to_csv(volume_df: pd.DataFrame, filepath: str = "demo_data/adaboost_volume.csv"):
+    """Saves the volume dataframe to a CSV file."""
+    volume_df.to_csv(filepath, index=True)
+    return True
+
+
+def load_demo_volume(filepath: str = "demo_data/adaboost_volume.csv") -> pd.DataFrame:
+    """Loads volume data from a CSV file (demo mode)."""
+    return pd.read_csv(filepath, index_col="Date", parse_dates=True, infer_datetime_format=True)
+
+
+def process_volume_data(volume_dict: Dict) -> pd.DataFrame:
+    """Processes raw volume data into a forward-filled DataFrame."""
+    volume_df_raw = pd.DataFrame(volume_dict)
+    return volume_df_raw.ffill(axis='rows')

@@ -1,5 +1,6 @@
 # VIXM Algorithmic Trading Strategy
 An algorithmic trading strategy incursion to create the first volatility security suitable for long term investors.
+This is a work in process, and here we centered in showing important features.
 
 <div id="top"></div>
 
@@ -88,6 +89,11 @@ If you look to reuse the code, and do not have experience on jupyter lab, you ca
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
+## Conclusions
+
+![Best features](images/feature_importance_plot.png)
+
+The best features to predict the VIXM next day movement are shown in the figure above. We see a highly diverse group, where the more important features are the VIX index return squared, followed by the VIX index previous return.
 
 <!-- Model Specifications -->
 ## Model Specifications
