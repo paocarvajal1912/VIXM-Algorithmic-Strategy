@@ -1,6 +1,7 @@
 
 from typing import Tuple
 import numpy as np
+import pandas as pd
 from pandas.tseries.offsets import DateOffset
 from imblearn.over_sampling import RandomOverSampler
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
@@ -48,7 +49,7 @@ def scale(
     X_test: pd.DataFrame,
     scaler_type: str = 'MinMaxScaler',
     debug_mode: bool = True
-) -> tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Scales the training and testing datasets.
 
@@ -77,9 +78,9 @@ def scale(
 def adaboost_pca(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
-    index: pd.Index,
+    idx: pd.Index,
     num_pca_components: int = 40,
-    debugg_mode: bool = True
+    debug_mode: bool = True
 ) -> pd.DataFrame:
     """
     Applies PCA on training and testing data and returns principal components.
@@ -104,7 +105,7 @@ def adaboost_pca(
     principal_components_df = pd.DataFrame(
         np.concatenate([principal_components_train, principal_components_test]),
         columns=pca_columns,
-        index=index
+        index=idx
     )
 
     if debug_mode:
@@ -120,7 +121,7 @@ def create_pca_lag(
     principal_components_df: pd.DataFrame,
     shift_amount: int,
     num_lag_components: int = 5,
-    debugg_mode: bool = True
+    debug_mode: bool = True
 ) -> pd.DataFrame:
     """
     Creates lagged principal components.
@@ -147,14 +148,14 @@ def create_pca_lag(
 
 def concatenate_lags(
     *lags: pd.DataFrame,
-    debugg_mode: bool = True
+    debug_mode: bool = True
 ) -> pd.DataFrame:
     """
     Concatenates multiple lagged DataFrames along the column axis.
 
     Args:
         lags (pd.DataFrame): Lagged DataFrames to concatenate.
-        debugg_mode (bool): Print additional information if True (default True).
+        debug_mode (bool): Print additional information if True (default True).
 
     Returns:
         pd.DataFrame: Concatenated DataFrame of lagged components.
@@ -170,7 +171,7 @@ def concatenate_lags(
 def combine_train_test(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
-    index: pd.Index
+    idx: pd.Index
 ) -> pd.DataFrame:
     """
     Combines training and testing datasets into a single DataFrame.
@@ -184,7 +185,7 @@ def combine_train_test(
         pd.DataFrame: Combined DataFrame with the given index.
     """
     X_combined = pd.concat([X_train, X_test], axis=0)
-    X_combined.index = index  # Ensure the index is set to the provided index
+    X_combined.index = idx  # Ensure the index is set to the provided index
     
     return X_combined
 
@@ -217,8 +218,8 @@ def eliminate_nans_in_pca_data(
     X_pc: pd.DataFrame,
     y: pd.Series,
     n: int = 5,
-    debugg_mode: bool = True
-) -> tuple[pd.DataFrame, pd.Series]:
+    debug_mode: bool = True
+) -> Tuple[pd.DataFrame, pd.Series]:
     """
     Removes the first `n` rows of missing values from the feature and target data.
 
@@ -226,7 +227,7 @@ def eliminate_nans_in_pca_data(
         X_pc (pd.DataFrame): DataFrame containing PCA features.
         y (pd.Series): Target signal Series.
         n (int): Number of rows to remove (default is 5).
-        debugg_mode (bool): Print additional information if True (default True).
+        debug_mode (bool): Print additional information if True (default True).
 
     Returns:
         Tuple: Cleaned X and y data.
@@ -244,7 +245,7 @@ def random_over_sample(
     X_train: pd.DataFrame,
     y_train: pd.DataFrame,
     debug_mode: bool = True
-) -> tuple[np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Applies random oversampling to balance the target classes in the training data.
 

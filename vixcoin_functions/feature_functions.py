@@ -46,9 +46,11 @@ def garch_fit_and_predict(series: pd.Series, ticker: str, horizon: int = 1,
     return serie_garch_before_shift
 
 
-def correlation_filter(series: pd.DataFrame, min_corr: float = 0.20, 
-                       key_column: str = 'VIXM', 
-                       eliminate_first_column: bool = False) -> pd.DataFrame:
+def correlation_filter(
+    series: pd.DataFrame, 
+    min_corr: float = 0.20, 
+    key_column: str = 'VIXM', 
+    eliminate_first_column: bool = False) -> pd.DataFrame:
     """
     Filters series that do not meet the minimum correlation with the key column.
 
