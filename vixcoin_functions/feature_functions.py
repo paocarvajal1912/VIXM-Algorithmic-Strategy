@@ -1,208 +1,186 @@
-# Vixm Feature Functions
 
+from datetime import datetime, timedelta
 import pandas as pd
 from arch import arch_model
 import yfinance as yf
-from datetime import datetime
 import numpy as np
 
 
-def garch_fit_and_predict(series, ticker, horizon=1, p=1, q=1, o=1, print_series_name=False):
-    #p=1,q=1, o=1 
-    #series=returns_df['spy']
-    #horizon=1
+def garch_fit_and_predict(series: pd.Series, ticker: str, horizon: int = 1, 
+                          p: int = 1, q: int = 1, o: int = 1, 
+                          print_series_name: bool = False) -> pd.Series:
     """
-    This function takes a series of returns, and get back the GJR-GARCH time series fit for the conditional volatility, 
-    using one shock, and a t-student distribution of errors that accepts a skew.
-    
+    Fits a GJR-GARCH model to a series of returns and predicts the conditional volatility.
+
     Args:
-    series: a pandas Series containing the time series of returns for which to predict its unconditional volatility
-    ticker: a string with the security name or the time series name for the output of the model
-    horizon=1: integer. The number of future out of sample predictions of the model. It is set up to one per default.
-    p,q,1: integer parameters of the GJR-GARCH model desired. All of them are defaulted to 1.
-           For details on this parameters see:
-           https://arch.readthedocs.io/en/latest/univariate/generated/arch.univariate.base.ARCHModel.html
-    print_series_name: indicator for output messages every time a series fit is completed. It is set to False per default.
-                     When it's set to True will print the output, when set to False, it will not.
-            For details in the model see:
-            https://arch.readthedocs.io/en/latest/univariate/univariate_volatility_modeling.html
-    
-    
-    Return:
-    A pandas Series which contains the GJR-GARCH time series fit for the conditional volatility, where the predicted value for the next day is
-    set to t, where t is the last date of the time series provided. The idea is to include the out-of-sample prediction (horizon) as a feature
-    in time t to predict t+1, where t is the present moment. The returned series have already made the shift.
+        series (pd.Series): Time series of returns for which to predict volatility.
+        ticker (str): Ticker symbol or name for the series.
+        horizon (int): Number of future predictions (default 1).
+        p, q, o (int): Parameters of the GJR-GARCH model (default 1).
+        print_series_name (bool): Prints series name if True (default False).
+
+    Returns:
+        pd.Series: GJR-GARCH time series fit for conditional volatility with future prediction.
     """
-
-    series=series.dropna()
-    shock_skew_gm_model=arch_model(
-                    series, 
-                    p=p, q=q, o=o,
-                    mean='constant',
-                    vol='GARCH',
-                    dist='skewt',
-                    rescale=True
-                    
+    series = series.dropna()
+    shock_skew_gm_model = arch_model(
+        series, p=p, q=q, o=o,
+        mean='constant',
+        vol='GARCH',
+        dist='skewt',
+        rescale=True
     )
-    if print_series_name==True:
-        print(f"Processing series: {ticker}....." )
-    
-    
-    #Fit GARCH model and predict
 
-    results_shock_skew_gm=shock_skew_gm_model.fit(update_freq=0, disp="off")
-    
-    conditional_volatility=results_shock_skew_gm.conditional_volatility
-    #summary               =results_shock_skew_gm.summary()
-    forecast              =results_shock_skew_gm.forecast(horizon=1, reindex=False)
+    if print_series_name:
+        print(f"Processing series: {ticker}...")
 
-    # Prepare return of the series ready to include to X before shift
-    serie_garch_before_shift=conditional_volatility.shift(-1)
-    serie_garch_before_shift.iloc[-1,:]=forecast.variance.iloc[-1]
+    # Fit GARCH model and predict
+    results_shock_skew_gm = shock_skew_gm_model.fit(update_freq=0, disp="off")
+    conditional_volatility = results_shock_skew_gm.conditional_volatility
+    forecast = results_shock_skew_gm.forecast(horizon=horizon, reindex=False)
+
+    # Prepare the series ready for inclusion in X before shifting
+    serie_garch_before_shift = conditional_volatility.shift(-1)
+    serie_garch_before_shift.iloc[-1] = forecast.variance.iloc[-1]
 
     return serie_garch_before_shift
 
 
-
-def correlation_filter(series, min_corr=0.20, key_column='VIXM', eliminate_first_column=False):
-    
+def correlation_filter(series: pd.DataFrame, min_corr: float = 0.20, 
+                       key_column: str = 'VIXM', 
+                       eliminate_first_column: bool = False) -> pd.DataFrame:
     """
-    This function filters series that do not exceed the minimum correlation with the series defined in the key_column.
-    Series that have only missing values are also eliminated.
-    
+    Filters series that do not meet the minimum correlation with the key column.
+
     Args:
-    
-    series     : a dataframe with time series to be filtered
-    min_corr   : a float number between -1 and 1 that indicated which is the minimum correlation to be included in the results
-    key_column : the name of the columns with which the level of correlation is measured
-    eliminate_first_column : option to exclude the first column from the results
-    """
+        series (pd.DataFrame): DataFrame with time series to be filtered.
+        min_corr (float): Minimum correlation threshold (default 0.20).
+        key_column (str): Column name to measure correlation against.
+        eliminate_first_column (bool): Whether to exclude the first column (default False).
 
+    Returns:
+        pd.DataFrame: Filtered DataFrame with columns meeting the correlation threshold.
+    """
     key_correlations = series.corr()[key_column]
-    to_keep_columns  = key_correlations[abs(key_correlations)>=min_corr].index
-    filtered_series=series[to_keep_columns]
-    
-    if eliminate_first_column==True:
-        filtered_series=filtered_series.iloc[:,1:]
-    
+    to_keep_columns = key_correlations[abs(key_correlations) >= min_corr].index
+    filtered_series = series[to_keep_columns]
+
+    if eliminate_first_column:
+        filtered_series = filtered_series.iloc[:, 1:]
 
     return filtered_series
 
 
-
 # Univariate retrievals (one ticker)
+def retrieve_yahoo_close(ticker: str = 'spy', start_date: str = None, 
+                         end_date: str = None) -> pd.Series:
+    """
+    Retrieves the close price time series from Yahoo Finance.
 
-def retrieve_yahoo_close(ticker = 'spy', start_date = '2011-02-01', end_date = '2021-11-29'):
-    
-    """
-    This function retrieves from Yahoo Finance an individual time series of close prices from a given ticker
-    If the close price for the ticker is not available, it provides an exception.
-    
     Args:
-    ticker: an string with the ticker to retrieve. Per default will retrieve the 'spy'
-    start_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. Per default will use '2007-07-02'
-    end_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. Per default will use '2021-10-01'
-    
-    Return:
-    the time series of close price for the ticker as a Pandas Series with the Date and the close price time series
+        ticker (str): Ticker to retrieve (default 'spy').
+        start_date (str): Start date of the time series (format 'YYYY-MM-DD').
+                          Defaults to 5 years before the end date if not provided.
+        end_date (str): End date of the time series (format 'YYYY-MM-DD'). 
+                        Defaults to yesterday's date if not provided.
+
+    Returns:
+        pd.Series: Time series of close prices.
     """
+    # Set end_date to yesterday if not provided
+    if end_date is None:
+        end_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # Set start_date to 5 years before the end_date if not provided
+    if start_date is None:
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+        start_date = (end_date_obj - timedelta(days=5*365)).strftime('%Y-%m-%d')
 
     try:
-        # get data based on ticker
         yahoo_data = yf.Ticker(ticker)
         print(f"Processing Close {ticker}")
-        # select close price data using start date and end data
         price_df = yahoo_data.history(start=start_date, end=end_date).Close
         price_df.name = ticker
-        # if no data retrieved raise exception
-        if price_df.shape[0] == 0:
+
+        if price_df.empty:
             raise Exception("No Prices.")
         return price_df
-    # handle exception
     except Exception as ex:
         print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
 
-        
-# Define function to retrieve one daily volume data from yahoo using ticker, start date and end date
-def retrieve_yahoo_volume(ticker = 'spy', start_date = '2007-07-02', end_date = '2021-10-01'):
 
+def retrieve_yahoo_volume(ticker: str = 'spy', start_date: str = '2007-07-02', 
+                          end_date: str = '2021-10-01') -> pd.Series:
     """
-    This function retrieves from Yahoo Finance a time series of traded volume from a given ticker
-    If the volume for the ticker is not available, it provides an exception.
-    
+    Retrieves the traded volume time series from Yahoo Finance.
+
     Args:
-    ticker: an string with the ticker to retrieve. Per default will retrieve the 'spy'
-    start_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. Per default will use '2007-07-02'
-    end_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. Per default will use '2021-10-01'
-    
-    Return:
-    The time series of traded volume for the ticker as a Pandas Series including the Date
+        ticker (str): Ticker to retrieve (default 'spy').
+        start_date (str): Start date of the time series (format 'YYYY-MM-DD').
+        end_date (str): End date of the time series (format 'YYYY-MM-DD').
+
+    Returns:
+        pd.Series: Time series of traded volume.
     """
     try:
-        # get data based on ticker
         yahoo_data = yf.Ticker(ticker)
         print(f"Processing Volume {ticker}")
-        # select data using start date and end data and calculate the daily return
         price_df = yahoo_data.history(start=start_date, end=end_date).Volume
         price_df.name = ticker
-        # if no data retrieved raise exception
-        if price_df.shape[0] == 0:
-            raise Exception("No Prices.")
+
+        if price_df.empty:
+            raise Exception("No Volume.")
         return price_df
-    # handle exception
     except Exception as ex:
         print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
 
-# Define function to retrieve put daily volume data from yahoo using ticker, start date and end date
-def retrieve_yahoo_put_options_volume(ticker = 'spy', date = '2007-07-02'):
-    """
-    This functions retrieves a time series of intraday volume for a given day.
-    If the volume for the ticker is not available, it provides an exception.
-    
-    Args:
-    ticker: an string with the ticker to retrieve. Per default will retrieve the options of the SPY with 'spy'
-    date: the date for which the intraday series of options volume is retrieved, using the format 'YYYY-MM-DD'. Per default it will use '2007-07-02'
-    
-    Return:
-    The intraday volume data as a Panda Series
-    """
 
+def retrieve_yahoo_put_options_volume(ticker: str = 'spy', 
+                                      date: str = '2007-07-02') -> pd.Series:
+    """
+    Retrieves intraday put options volume for a given day.
+
+    Args:
+        ticker (str): Ticker to retrieve (default 'spy').
+        date (str): Date for the intraday series (format 'YYYY-MM-DD').
+
+    Returns:
+        pd.Series: Intraday put options volume.
+    """
     try:
-        # get data based on ticker
         yahoo_data = yf.Ticker(ticker)
         print(f"Processing put volume from {ticker}")
-        # select data using start date and end data and calculate the daily return
         opts = yahoo_data.option_chain()
         price_df = opts.puts
         price_df.name = ticker
         price_df = price_df.volume
-        # if no data retrieved raise exception
-        if price_df.shape[0] == 0:
-            raise Exception("No Prices.")
+
+        if price_df.empty:
+            raise Exception("No Volume.")
         return price_df
-    # handle exception
     except Exception as ex:
         print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
 
-        
+
 # Multi-tickers in a list retrieval
-        
-def retrieve_close_multiple_tickers(ticker_list, start_date, end_date):
+def retrieve_close_multiple_tickers(ticker_list: list, start_date: str, 
+                                    end_date: str) -> pd.DataFrame:
     """
-    This function retrieves close prices from Yahoo Finance for a ticker list
-    
-    Arg:
-    ticker_list: a list of tickers of the yahoo close prices to be retrieve
-    start_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. 
-    end_date: the start date of the time series to retrieve in the format 'YYYY-MM-DD'. 
-    
-    Return:
-    A dictionary with close prices
+    Retrieves close prices from Yahoo Finance for a list of tickers.
+
+    Args:
+        ticker_list (list): List of tickers to retrieve.
+        start_date (str): Start date of the time series (format 'YYYY-MM-DD').
+        end_date (str): End date of the time series (format 'YYYY-MM-DD').
+
+    Returns:
+        pd.DataFrame: DataFrame with close prices for each ticker.
     """
     close_prices_dict = {}
-    
+
     for ticker in ticker_list:
         close_price = retrieve_yahoo_close(ticker, start_date=start_date, end_date=end_date)
         close_prices_dict[ticker] = close_price
-        close_prices_df=pd.DataFrame(close_prices_dict)
+
+    close_prices_df = pd.DataFrame(close_prices_dict)
     return close_prices_df
