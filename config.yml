@@ -1,0 +1,94 @@
+# Configuration File
+# VIXM Algoritmic Trading Signal
+
+# Key parameters of the model
+seed: 19
+start_date: 2015-01-02
+end_date: 2025-01-02
+
+# Min return to set up a positive signal
+threshold: 0.00 
+
+# Min correlation with the VIXM to keep the series
+key_column: VIXM
+min_corr: 0.05 
+
+# Split of data
+training_period_months: 120 
+
+# Adaboost parameters
+adaboost_estimators: 6 
+max_depth: 2
+learning_rate_adaboost: 1.7 
+
+# Inclusion of the first ppal components lagged
+number_of_pca_lag_component_to_include: 5
+num_pca_components: 40
+
+# Definition of demo mode or development mode
+demo_mode: False
+tuning_mode: True
+run_multiple_tuning_iterations: False
+
+# Ticker List: VIXM must be in first position
+ticker_list:
+  - VIXM
+  - ^VIX
+  - SPY
+  - GBPUSD=X
+  - BRLUSD=X
+  - DX-Y.NYB
+  - USDJPY=X
+  - ^TNX
+  - ZF=F
+  - NQ=F
+  - NKD=F
+  - LQD
+  - AAPL
+  - AMZN
+  - MU
+  - MSFT
+  - BMY
+  - PLD
+  - FXI
+  - FEZ
+  - ^FTSE
+  - ^FCHI
+  - ^GSPC
+  - GLD
+  - SLV
+  - ES=F
+  - QM=F
+  - BIO=F
+  - AGG
+  
+
+#Some of the less familiar tickers are listed below, together with others that can be good to try again in the future
+#Bristol-Myers Squibb Company (BMY)
+#E-Mini Nasdaq                (BIO=F)
+#Euro spot                    (EURUSD)
+#E-Mini S&P500                (ES=F)
+#CAC 40                       (^FCHI)
+#FTSE 100                     (^FTSE)
+#SPDR EURO STOXX 50 ETF       (FEZ)
+#FEDEX CORP                   (FDX)
+#The Goldman Sachs Group, Inc.(GS)
+#DAX PERFORMANCE-INDEX        (^GDAXI)
+#S&P500 Index                 (^GSPC)
+#HANG SENG INDEX              (^HSI)
+#13 Week Treasury Bill        (^IRX) 
+#iShares iBoxx $ Investment Grade Corporate Bond ETF (LQD)
+#Micron Technology, Inc.      (MU)
+#Microsoft Corporation        (MSFT)
+#Nikkei/USD Futures,Dec-2021 (NKD=F)
+#Nasdaq 100 Dec 21           (NQ=F)
+#NVIDIA Corporation          (NVDA)
+#E-Mini oil                  (QM=F)
+#Prologis, Inc.              (PLD)
+#Treasury Yield 10 Years     (^TNX) -- 1985
+#Yen Denominated TOPIX Futures,D   (TPY=F)
+#American Funds U.S. Government Securities Fund Class C (UGSCX) - 2001
+#Energy Select Sector SPDR Fund    (XLE)
+#Financial Select Sector SPDR Fund (XLF)
+#U.S. Treasury Bond Futures,Dec-   (ZB=F) - 2000
+#Five-Year US Treasury Note Futu   (ZF=F) - 2000
