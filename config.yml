@@ -3,8 +3,8 @@
 
 # Key parameters of the model
 seed: 19
-start_date: 2015-01-02
-end_date: 2025-01-02
+start_date: 2011-01-05
+end_date: 2025-01-05
 
 # Min return to set up a positive signal
 threshold: 0.00 
@@ -61,6 +61,20 @@ ticker_list:
   - QM=F
   - BIO=F
   - AGG
+  
+garch_not_to_include: 
+    - BIO=F
+
+windows_for_volatility_lags: # in days
+    - 10
+    - 20
+    - 30
+    - 60
+    - 90
+    - 120
+    - 180
+    - 200
+    - 260
   
 
 #Some of the less familiar tickers are listed below, together with others that can be good to try again in the future

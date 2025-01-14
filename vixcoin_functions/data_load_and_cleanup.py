@@ -2,9 +2,10 @@
 import pandas as pd
 from typing import Dict, List
 from feature_functions import (
-    #garch_fit_and_predict, 
+    garch_fit_and_predict, 
     correlation_filter,
-    #retrieve_yahoo_close, retrieve_yahoo_volume, 
+    retrieve_yahoo_close, 
+    #retrieve_yahoo_volume, 
     #retrieve_close_multiple_tickers,
     retrieve_volume, 
     save_volume_to_csv, 
@@ -65,7 +66,7 @@ def cleanup_prices_and_get_vixm_price_and_return(
     print("Close prices included in First X component X1:")
     print(X1.columns)
     
-    return X1, vixm, vixm_ret
+    return X1, vixm, vixm_ret, close_prices_df
 
 
 # Calculation of security returns component X2
@@ -86,7 +87,7 @@ def get_return_component(close_prices_df: pd.DataFrame,
     """
     security_returns_df = close_prices_df.pct_change()
     security_returns_component_df = correlation_filter(                            
-        security_returns_df, 
+        security_returns_df.copy(), 
         min_corr=config["min_corr"], 
         key_column='VIXM', # VIXM col will have the return oof VIXM
         eliminate_first_column=False
@@ -101,7 +102,7 @@ def get_return_component(close_prices_df: pd.DataFrame,
         
     print("Completed inclusion of returns")
     
-    return X2
+    return X2, security_returns_df
 
 # Calculation of security volume component X3
 def get_volume_component(
@@ -153,6 +154,124 @@ def get_volume_component(
     print("Succesful calculation of security volume component X3" )
     return X3
 
+# Calculation of the GARCH component X4
+def get_garch_component(
+    ticker_list: List,
+    config: Dict,
+    security_returns_df: pd.DataFrame,
+    display_results: bool = False
+    ):
+    """Calculates the GARCH conditionally volatility forecasting
+    for each security.
+
+    Args:
+        use_api (bool, optional): Whether the Yahoo API should be use for the data.
+            Defaults to True. If false will read from a csv file.
+    """
+    garch_series_df = pd.DataFrame()
+    not_to_include = config['garch_not_to_include']
+
+    for ticker in ticker_list:
+        if ticker in not_to_include:
+            continue
+
+        garch_series_df[ticker] = garch_fit_and_predict(
+            security_returns_df[ticker], ticker, 
+            horizon=1, p=1, q=1, o=1, 
+            print_series_name=display_results
+        )
+
+    X4 = garch_series_df.add_suffix("_garch")
+
+    if display_results:
+       print(X4.tail())
+
+    print('GARCH Process fit and predictions completed for component X4')
+    
+    return X4
+
+
+# Calculation of the return squares component X5
+def get_return_squared(
+    config: Dict,
+    vixm_ret: pd.DataFrame,
+    security_returns_df: pd.DataFrame,
+    display_results: bool = False
+    ):
+    """Calculates the return squared of each ticker
+
+    Args:
+        config (Dict): configuration file containing the minimum 
+            correlation of the squared returned with the vixm 
+            squared return consider to keep the series. 
+        vixm_ret (pd.Series): _description_
+        security_returns_df (pd.DataFrame): _description_
+        display_results (bool, optional): It will show the tail of the 
+            resulting dataframe if True. Defaults to False.
+    """
+    returns_squared_df = security_returns_df ** 2
+    vixm_ret2 = vixm_ret ** 2
+    returns_squared_and_vixm_ret_df = pd.concat(
+        [vixm_ret2,returns_squared_df], 
+        axis=1
+    )
+    returns_squared_component_df = correlation_filter(
+        returns_squared_and_vixm_ret_df, 
+        min_corr=config["min_corr"], 
+        key_column='VIXM_ret', # this is vixm ret squared
+        eliminate_first_column=True
+    )
+    X5 = returns_squared_component_df.add_suffix(
+        "_return_squared"
+    )
+    if display_results:
+        print(X5.tail())
+    print("Return squared calculation completed for componenent 5 (X5)")
+
+    return X5
+
+# Calculation of SPY volatility on varios windows
+def get_ticker_volatilities(
+    start_date_volatilities,
+    vixm,
+    ticker: str = 'spy',
+    end_date = None,
+    config = {},
+    display_results: bool = False
+):
+    end_date = end_date if end_date is not None else config['end_date']
+    close_price_ticker_df = retrieve_yahoo_close(
+        ticker,
+        start_date=start_date_volatilities,
+        end_date=end_date
+    )
+    close_price_ticker_df.to_csv(f"demo_data/adaboost_{ticker}_data.csv", index=True)
+
+    ticker_returns_df = close_price_ticker_df.pct_change()
+
+    # Calculates calculation
+    ticker_volatility = pd.DataFrame()
+    windows_for_lag = config['windows_for_volatility_lags']
+
+    for window_size in windows_for_lag:
+        column_name = f"{window_size}_{ticker}_rolling_volatility"
+        ticker_volatility[column_name] = ticker_returns_df.rolling(
+            window=window_size).std()
+
+    # Concatenate to vixm to uniform index
+    X8 = pd.concat([vixm, ticker_volatility], axis=1)
+    
+    # Fill missing data, and delete vixm, that was  used to uniform the index
+    X8 = X8.ffill()
+    X8 = X8.iloc[:, 1:]
+
+    # Setting for demo
+    if display_results:
+        print(X8.shape)
+        print(X8.tail())
+    print("Rolling volatilities component completed (X8)")
+    
+    return X8
 
 
 
