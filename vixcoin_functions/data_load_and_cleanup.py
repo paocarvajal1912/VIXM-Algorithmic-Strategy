@@ -274,6 +274,68 @@ def get_ticker_volatilities(
     return X8
 
 
+# Calculation of day of the week effect
+# 0: Monday, 6: Sunday
+def get_day_of_week_component(
+    close_prices_df: pd.DataFrame,
+    display_results: bool = False
+):
+    """Add dummy features for each day of the week"""
+    date_idx_name = close_prices_df.index.name
+    # Calculate day of week for index dates (in "Date" column)
+    day_of_week_df = pd.DataFrame(
+        close_prices_df.index.dayofweek,
+        close_prices_df.index
+    )
+    # Transform day numbers to dummies
+    day_of_week_df = pd.concat(
+        [day_of_week_df, pd.get_dummies(day_of_week_df[date_idx_name])],
+        axis=1
+    )
+    # Drop "Date" col and rename dummy cols with day of the week
+    day_of_week_df.drop(columns=[date_idx_name], inplace=True)
+    day_of_week_df.columns = ["Mon", "Tue", "Wed","Thu","Fri"]
+
+    if display_results:
+        print("day_of_week_df.shape: ", day_of_week_df.shape)
+        print("day_of_week_df.value_counts")
+        print(day_of_week_df.value_counts())
+        print("tail\n", day_of_week_df.tail())
+    print("Calculation of day of the week effect component (X10) completed.")
+
+    return day_of_week_df
+
+# Calculation of the Month Effect Component
+def get_month_component(
+    close_prices_df: pd.DataFrame,
+    display_results: bool = False
+):
+    """Add dummy features with the month of the index
+    """
+    date_idx_name = close_prices_df.index.name
+    month_df = pd.DataFrame(
+        close_prices_df.index.month,
+        index=close_prices_df.index
+    )
+    # Transform columns to features columns signaling the month as boolean
+    month_df = pd.concat(
+        [month_df,pd.get_dummies(month_df[date_idx_name])],
+        axis=1
+    )
+    # Drop "Date" col and rename dummy cols with the month
+    month_df.drop(columns=[date_idx_name], inplace=True)
+    month_df.columns = ["Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    if display_results:
+        print("month_df.shape:", month_df.shape)
+        print("month_df value_counts")
+        print(month_df.value_counts())
+        print("tail\n", month_df.tail())
+    print("Calculation of day of the week effect component (X10) completed.")
+
+    return month_df
+
+
 
 
 
