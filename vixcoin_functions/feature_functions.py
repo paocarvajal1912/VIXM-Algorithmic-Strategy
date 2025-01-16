@@ -2,15 +2,32 @@
 from typing import List, Dict
 import pandas as pd
 from arch import arch_model
-from data_load_and_cleanup import (
-    garch_fit_and_predict, 
-    correlation_filter,
-    retrieve_yahoo_close, 
-    retrieve_volume, 
-    save_volume_to_csv, 
-    load_demo_volume, 
-    process_volume_data
-)
+
+def correlation_filter(
+    series: pd.DataFrame, 
+    min_corr: float = 0.20, 
+    key_column: str = 'VIXM', 
+    eliminate_first_column: bool = False) -> pd.DataFrame:
+    """
+    Filters series that do not meet the minimum correlation with the key column.
+
+    Args:
+        series (pd.DataFrame): DataFrame with time series to be filtered.
+        min_corr (float): Minimum correlation threshold (default 0.20).
+        key_column (str): Column name to measure correlation against.
+        eliminate_first_column (bool): Whether to exclude the first column (default False).
+
+    Returns:
+        pd.DataFrame: Filtered DataFrame with columns meeting the correlation threshold.
+    """
+    key_correlations = series.corr()[key_column]
+    to_keep_columns = key_correlations[abs(key_correlations) >= min_corr].index
+    filtered_series = series[to_keep_columns]
+
+    if eliminate_first_column:
+        filtered_series = filtered_series.iloc[:, 1:]
+
+    return filtered_series
 
 
 def garch_fit_and_predict(series: pd.Series, ticker: str, horizon: int = 1, 
@@ -53,67 +70,65 @@ def garch_fit_and_predict(series: pd.Series, ticker: str, horizon: int = 1,
     return serie_garch_before_shift
 
 # Calculation of security prices component X1
-def cleanup_prices_and_get_vixm_price_and_return(
-    close_prices_df_raw: pd.DataFrame,
+def get_prices_component(
+    close_prices_df: pd.DataFrame,
     config: Dict,
     display_results: bool = False):
-    """Get the first component X1 with clean prices.
-    Missing prices are replace with the available
-    previoous day price.
+    """Get the first component X1 with clean prices and 
+    correlation clean up.
 
     Args:
-        close_prices_df_raw (pd.DataFrame): A dataframe with raw security prices
+        close_prices_df (pd.DataFrame): A dataframe with raw security prices
         config (Dict): a dictionary containing the minimum correlation between prices
             of a ticker to be included
         display_results (bool, optional): Whether to display X1 last prices. 
             Defaults to False.
 
     Returns:
-        Tuple: First, the first component X1
-            Secondly, the clean vixm close price series
-            Thirly, the clean vixm daily return series
+        X1 (pandas dataframe): The first component X1 
     """
-    # X1 (close prices) - Fill of missing values
-    close_prices_df = close_prices_df_raw.ffill(axis='rows'
-    )
-    # Apply correlation filter to keep series with low correlation
-    close_prices_component_df = correlation_filter(
-        close_prices_df, min_corr=config['min_corr'], 
-        key_column=config['key_column'], eliminate_first_column=False
-    )
-    # Filling price_t with price_t-1 if price_t not available
-    close_prices_component_df = close_prices_component_df.ffill(axis='rows'
-    )
-    # First columns is not given back, so we take opportunity to rename them
-    X1 = close_prices_component_df.add_suffix("_close").copy()
 
+    # Apply correlation filter to keep series with low correlation
+    prices_component_df = correlation_filter(
+        close_prices_df, min_corr=config['min_corr'], 
+        key_column=config['key_column'], 
+        eliminate_first_column=False
+    )
+    # First columns is not given back, so we take opportunity 
+    # to rename them
+    X1 = prices_component_df.add_suffix("_close").copy()
+    key_ticker_price_col_name = f"{config['key_column']}_close"
+    
     # Additional time series for easy manipulation of VIXM close and returns
-    vixm = X1['VIXM_close']
-    vixm_ret = X1['VIXM_close'].pct_change()
+    vixm = X1[key_ticker_price_col_name]
+    vixm_ret = X1[key_ticker_price_col_name].pct_change()
 
     vixm = pd.DataFrame([vixm]).T
-    vixm.columns = ['VIXM']  # 'vixm' will represent the close and 'vixm_ret' the return
-
+    vixm.columns = [config['key_column']]  # VIXM will be the name, 'vixm' will represent the close and 'vixm_ret' the return
     vixm_ret = pd.DataFrame([vixm_ret]).T
-    vixm_ret.columns = ['VIXM_ret']
+    
+    vixm_ret.columns = [f"{config['key_column']}_ret"] #VIXM_ret
 
     if display_results:
         print("Last records of the first component X1:")
         print(X1.tail())
 
-    print("Completed cleanup of close prices")
-    print("Close prices included in First X component X1:")
-    print(X1.columns)
-    
-    return X1, vixm, vixm_ret, close_prices_df
+        print("Close prices included in First X component X1:")
+        print(X1.columns)
+        print("Close prices excluded due to correlation filter:")
+        print( set(close_prices_df.columns) - set(X1.columns))
+
+    print("Calculation of price component completed")
+    return X1, vixm, vixm_ret
 
 # Calculation of security returns component X2
 # Include returns that are (minimally) correlated with the VIXM return
-def get_return_component(close_prices_df: pd.DataFrame,
+def get_return_component(
+    daily_returns_df: pd.DataFrame,
     config: Dict,
     display_results: bool = False
     ):
-    """Calculates the security returns and 
+    """Filter returns that are relevant
 
     Args:
         close_prices_df (pd.DataFrame): _description_
@@ -123,9 +138,8 @@ def get_return_component(close_prices_df: pd.DataFrame,
     Returns:
         _type_: _description_
     """
-    security_returns_df = close_prices_df.pct_change()
     security_returns_component_df = correlation_filter(                            
-        security_returns_df.copy(), 
+        daily_returns_df.copy(), 
         min_corr=config["min_corr"], 
         key_column='VIXM', # VIXM col will have the return oof VIXM
         eliminate_first_column=False
@@ -137,10 +151,14 @@ def get_return_component(close_prices_df: pd.DataFrame,
     if display_results:
         print("Last records of the second component X2:")
         print(X2.tail())
+        print("Returns included in second component X2:")
+        print(X2.columns)
+        print("Returns excluded due to correlation filter:")
+        print( set(daily_returns_df.columns) - set(X2.columns))
         
-    print("Completed inclusion of returns")
+    print("Calculation of returns component completed")
     
-    return X2, security_returns_df
+    return X2
 
 # Calculation of security volume component X3
 def get_volume_component(

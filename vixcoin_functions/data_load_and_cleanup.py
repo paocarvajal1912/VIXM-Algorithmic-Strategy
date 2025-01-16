@@ -65,7 +65,9 @@ def save_data(data, config):
 def process_data_pipeline(config,display_detailed_steps=False):
     data = load_data(config,display_detailed_steps)
     data = clean_data(data)
+    data['d_returns'] = data['prices'].pct_change()
     save_data(data, config)
+    return data
 
 def correlation_filter(
     series: pd.DataFrame, 
