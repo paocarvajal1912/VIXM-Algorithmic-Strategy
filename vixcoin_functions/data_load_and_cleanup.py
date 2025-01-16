@@ -69,32 +69,6 @@ def process_data_pipeline(config,display_detailed_steps=False):
     save_data(data, config)
     return data
 
-def correlation_filter(
-    series: pd.DataFrame, 
-    min_corr: float = 0.20, 
-    key_column: str = 'VIXM', 
-    eliminate_first_column: bool = False) -> pd.DataFrame:
-    """
-    Filters series that do not meet the minimum correlation with the key column.
-
-    Args:
-        series (pd.DataFrame): DataFrame with time series to be filtered.
-        min_corr (float): Minimum correlation threshold (default 0.20).
-        key_column (str): Column name to measure correlation against.
-        eliminate_first_column (bool): Whether to exclude the first column (default False).
-
-    Returns:
-        pd.DataFrame: Filtered DataFrame with columns meeting the correlation threshold.
-    """
-    key_correlations = series.corr()[key_column]
-    to_keep_columns = key_correlations[abs(key_correlations) >= min_corr].index
-    filtered_series = series[to_keep_columns]
-
-    if eliminate_first_column:
-        filtered_series = filtered_series.iloc[:, 1:]
-
-    return filtered_series
-
 # Univariate retrievals (one ticker)
 def retrieve_yahoo_close(
     ticker: str = 'spy', start_date: str = None, 
