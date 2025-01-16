@@ -1,339 +1,246 @@
 # Functions to load and clean data for the VIXM strategy
+import os
 import pandas as pd
-from typing import Dict, List
-from feature_functions import (
-    garch_fit_and_predict, 
-    correlation_filter,
-    retrieve_yahoo_close, 
-    #retrieve_yahoo_volume, 
-    #retrieve_close_multiple_tickers,
-    retrieve_volume, 
-    save_volume_to_csv, 
-    load_demo_volume, 
-    process_volume_data
-)
+from typing import List, Dict, Tuple
+from datetime import datetime, timedelta
+import pandas as pd
+import yfinance as yf
+import numpy as np
 
-# Calculation of security prices component X1
-def cleanup_prices_and_get_vixm_price_and_return(
-    close_prices_df_raw: pd.DataFrame,
-    config: Dict,
-    display_results: bool = False):
-    """Get the first component X1 with clean prices.
-    Missing prices are replace with the available
-    previoous day price.
+def load_data(config: Dict, display_detailed_steps=False):
+    """retrieve prices and volume from yahoo finance for ticker list
+    The config file must have at least the following information: 
+    ticker_list, start_date, and end_date.
+    """
+    prices_df = retrieve_close_multiple_tickers(
+        config["ticker_list"],
+        config["start_date"],
+        config["end_date"],
+        display_detailed_steps=display_detailed_steps
+    )
+    volume_df = retrieve_volume_multiple_tickers(
+        config["ticker_list"],
+        config["start_date"],
+        config["end_date"],
+        display_detailed_steps=display_detailed_steps
+    )
+    print("Raw data of prices and volume has been succesfully loaded")
+    print("For the following tickers:")
+    print("    Prices:", list(prices_df.columns))
+    print("    Volume:", list(volume_df.columns))
+    print()
+    if display_detailed_steps:
+        print("Prices Tail")
+        print(prices_df)
+        print(volume_df)
+        print("Volume Tail")
+        print(volume_df)
+    
+    return {
+        'prices': prices_df,
+        'volume': volume_df
+    }
+    
+def clean_data(data):
+    """Clean the data by filling missing values
+    with the previous value in each column"""
+    for key, df in data.items():
+        data[key] = df.ffill(axis=0)
+        print(f"{key} data succesfully cleaned")
+    return data
+
+def save_data(data, config):
+    """Save the files to the directory in config file"""
+    data_folder = config.get('data_folder', './data')
+    os.makedirs(data_folder, exist_ok=True)
+    for key, df in data.items():
+        try:
+            filename = f"clean_{key}.csv" 
+            filepath = os.path.join(data_folder,filename)
+            df.to_csv(filepath, index=True)
+            print(f"Saved {filename} to {data_folder}")
+        except Exception as e:
+            print(f"Failed to save {key}: {e}")
+            
+def process_data_pipeline(config,display_detailed_steps=False):
+    data = load_data(config,display_detailed_steps)
+    data = clean_data(data)
+    save_data(data, config)
+
+def correlation_filter(
+    series: pd.DataFrame, 
+    min_corr: float = 0.20, 
+    key_column: str = 'VIXM', 
+    eliminate_first_column: bool = False) -> pd.DataFrame:
+    """
+    Filters series that do not meet the minimum correlation with the key column.
 
     Args:
-        close_prices_df_raw (pd.DataFrame): A dataframe with raw security prices
-        config (Dict): a dictionary containing the minimum correlation between prices
-            of a ticker to be included
-        display_results (bool, optional): Whether to display X1 last prices. 
-            Defaults to False.
+        series (pd.DataFrame): DataFrame with time series to be filtered.
+        min_corr (float): Minimum correlation threshold (default 0.20).
+        key_column (str): Column name to measure correlation against.
+        eliminate_first_column (bool): Whether to exclude the first column (default False).
 
     Returns:
-        Tuple: First, the first component X1
-            Secondly, the clean vixm close price series
-            Thirly, the clean vixm daily return series
+        pd.DataFrame: Filtered DataFrame with columns meeting the correlation threshold.
     """
-    # X1 (close prices) - Fill of missing values
-    close_prices_df = close_prices_df_raw.ffill(axis='rows'
-    )
-    # Apply correlation filter to keep series with low correlation
-    close_prices_component_df = correlation_filter(
-        close_prices_df, min_corr=config['min_corr'], 
-        key_column=config['key_column'], eliminate_first_column=False
-    )
-    # Filling price_t with price_t-1 if price_t not available
-    close_prices_component_df = close_prices_component_df.ffill(axis='rows'
-    )
-    # First columns is not given back, so we take opportunity to rename them
-    X1 = close_prices_component_df.add_suffix("_close").copy()
+    key_correlations = series.corr()[key_column]
+    to_keep_columns = key_correlations[abs(key_correlations) >= min_corr].index
+    filtered_series = series[to_keep_columns]
 
-    # Additional time series for easy manipulation of VIXM close and returns
-    vixm = X1['VIXM_close']
-    vixm_ret = X1['VIXM_close'].pct_change()
+    if eliminate_first_column:
+        filtered_series = filtered_series.iloc[:, 1:]
 
-    vixm = pd.DataFrame([vixm]).T
-    vixm.columns = ['VIXM']  # 'vixm' will represent the close and 'vixm_ret' the return
+    return filtered_series
 
-    vixm_ret = pd.DataFrame([vixm_ret]).T
-    vixm_ret.columns = ['VIXM_ret']
-
-    if display_results:
-        print("Last records of the first component X1:")
-        print(X1.tail())
-
-    print("Completed cleanup of close prices")
-    print("Close prices included in First X component X1:")
-    print(X1.columns)
-    
-    return X1, vixm, vixm_ret, close_prices_df
-
-
-# Calculation of security returns component X2
-# Include returns that are (minimally) correlated with the VIXM return
-def get_return_component(close_prices_df: pd.DataFrame,
-    config: Dict,
-    display_results: bool = False
-    ):
-    """Calculates the security returns and 
+# Univariate retrievals (one ticker)
+def retrieve_yahoo_close(
+    ticker: str = 'spy', start_date: str = None, 
+    end_date: str = None, display_detailed_steps=True) -> pd.Series:
+    """
+    Retrieves the close price time series from Yahoo Finance.
 
     Args:
-        close_prices_df (pd.DataFrame): _description_
-        config (Dict): _description_
-        display_results (bool, optional): _description_. Defaults to False.
+        ticker (str): Ticker to retrieve (default 'spy').
+        start_date (str): Start date of the time series (format 'YYYY-MM-DD').
+                          Defaults to 5 years before the end date if not provided.
+        end_date (str): End date of the time series (format 'YYYY-MM-DD'). 
+                        Defaults to yesterday's date if not provided.
 
     Returns:
-        _type_: _description_
+        pd.Series: Time series of close prices.
     """
-    security_returns_df = close_prices_df.pct_change()
-    security_returns_component_df = correlation_filter(                            
-        security_returns_df.copy(), 
-        min_corr=config["min_corr"], 
-        key_column='VIXM', # VIXM col will have the return oof VIXM
-        eliminate_first_column=False
-    )
+    # Set end_date to yesterday if not provided
+    if end_date is None:
+        end_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    # The generation of a suffix is necesary when evaluating feature importance for time series identification
-    X2 = security_returns_component_df.add_suffix('_returns')
+    # Set start_date to 5 years before the end_date if not provided
+    if start_date is None:
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+        start_date = (end_date_obj - timedelta(days=5*365)).strftime('%Y-%m-%d')
 
-    if display_results:
-        print("Last records of the second component X2:")
-        print(X2.tail())
-        
-    print("Completed inclusion of returns")
-    
-    return X2, security_returns_df
+    try:
+        yahoo_data = yf.Ticker(ticker)
+        if display_detailed_steps:
+            print(f"Processing Close {ticker}")
+        price_df = yahoo_data.history(start=start_date, end=end_date).Close
+        price_df.name = ticker
 
-# Calculation of security volume component X3
-def get_volume_component(
-    ticker_list: List,
-    config: Dict,
-    vixm_ret: pd.Series,
-    use_api: bool = True,
-    display_results: bool = False
-    ):
+        if price_df.empty:
+            raise Exception("No Prices.")
+        return price_df
+    except Exception as ex:
+        print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
+
+
+def retrieve_yahoo_volume(
+    ticker: str = 'spy', start_date: str = '2007-07-02', 
+    end_date: str = '2021-10-01', display_detailed_steps=True) -> pd.Series:
     """
-    
-    """
-    volume_list = ticker_list[0:len(ticker_list)]
-
-    if use_api == False:
-        volume_df = load_demo_volume()
-    else:
-        volume_dict = retrieve_volume(volume_list, 
-            config["start_date"], config["end_date"]
-        )
-        volume_df = process_volume_data(volume_dict)
-    
-    # Save and check if the save was successful
-    if save_volume_to_csv(volume_df):
-        print("Volume data saved successfully.")
-    else:
-        print("Failed to save volume data.")
-        
-    print("Completed retrieve of volume")
-
-    volume_df_with_vixm = pd.concat([vixm_ret, volume_df], axis=1)
-
-    volume_component_df = correlation_filter(
-        volume_df_with_vixm, 
-        min_corr=config["min_corr"], 
-        key_column='VIXM_ret', 
-        eliminate_first_column=True 
-    )
-    X3 = volume_component_df.add_suffix("_volume").copy()
-
-    if display_results:
-        print("Last columns of the component")
-        print(X3.tail())
-        print("Volume data included:")
-        print(X3.columns)
-        print("Volume data excluded due to low correlation:")
-        tickers_w_suffix = [ticker + "_volume" for ticker in ticker_list]
-        print(set(tickers_w_suffix) - set(X3.columns))
-    print("Succesful calculation of security volume component X3" )
-    return X3
-
-# Calculation of the GARCH component X4
-def get_garch_component(
-    ticker_list: List,
-    config: Dict,
-    security_returns_df: pd.DataFrame,
-    display_results: bool = False
-    ):
-    """Calculates the GARCH conditionally volatility forecasting
-    for each security.
+    Retrieves the traded volume time series from Yahoo Finance.
 
     Args:
-        use_api (bool, optional): Whether the Yahoo API should be use for the data.
-            Defaults to True. If false will read from a csv file.
+        ticker (str): Ticker to retrieve (default 'spy').
+        start_date (str): Start date of the time series (format 'YYYY-MM-DD').
+        end_date (str): End date of the time series (format 'YYYY-MM-DD').
+
+    Returns:
+        pd.Series: Time series of traded volume.
     """
-    garch_series_df = pd.DataFrame()
-    not_to_include = config['garch_not_to_include']
+    try:
+        yahoo_data = yf.Ticker(ticker)
+        if display_detailed_steps:
+            print(f"Processing Volume {ticker}")
+        price_df = yahoo_data.history(start=start_date, end=end_date).Volume
+        price_df.name = ticker
+
+        if price_df.empty:
+            raise Exception("No Volume.")
+        return price_df
+    except Exception as ex:
+        print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
+
+
+def retrieve_yahoo_put_options_volume(
+    ticker: str = 'spy', date: str = '2024-09-27') -> pd.Series:
+    """
+    Retrieves intraday put options volume for a given day.
+
+    Args:
+        ticker (str): Ticker to retrieve (default 'spy').
+        date (str): Date for the intraday series (format 'YYYY-MM-DD').
+
+    Returns:
+        pd.Series: Intraday put options volume.
+    """
+    try:
+        yahoo_data = yf.Ticker(ticker)
+        print(f"Processing put volume from {ticker}")
+        opts = yahoo_data.option_chain()
+        price_df = opts.puts
+        price_df.name = ticker
+        price_df = price_df.volume
+
+        if price_df.empty:
+            raise Exception("No Volume.")
+        return price_df
+    except Exception as ex:
+        print(f"Sorry, Data not available for '{ticker}': Exception is {ex}")
+
+
+# Multi-tickers in a list retrieval
+def retrieve_close_multiple_tickers(
+    ticker_list: list, start_date: str, 
+    end_date: str,
+    display_detailed_steps=True
+    ) -> pd.DataFrame:
+    """
+    Retrieves close prices from Yahoo Finance for a list of tickers.
+
+    Args:
+        ticker_list (list): List of tickers to retrieve.
+        start_date (str): Start date of the time series (format 'YYYY-MM-DD').
+        end_date (str): End date of the time series (format 'YYYY-MM-DD').
+
+    Returns:
+        pd.DataFrame: DataFrame with close prices for each ticker.
+    """
+    close_prices_dict = {}
 
     for ticker in ticker_list:
-        if ticker in not_to_include:
-            continue
+        close_price = retrieve_yahoo_close(
+            ticker, start_date=start_date, end_date=end_date,
+            display_detailed_steps=display_detailed_steps)
+        close_prices_dict[ticker] = close_price
 
-        garch_series_df[ticker] = garch_fit_and_predict(
-            security_returns_df[ticker], ticker, 
-            horizon=1, p=1, q=1, o=1, 
-            print_series_name=display_results
-        )
-
-    X4 = garch_series_df.add_suffix("_garch")
-
-    if display_results:
-       print(X4.tail())
-
-    print('GARCH Process fit and predictions completed for component X4')
-    
-    return X4
+    close_prices_df = pd.DataFrame(close_prices_dict)
+    return close_prices_df
 
 
-# Calculation of the return squares component X5
-def get_return_squared(
-    config: Dict,
-    vixm_ret: pd.DataFrame,
-    security_returns_df: pd.DataFrame,
-    display_results: bool = False
-    ):
-    """Calculates the return squared of each ticker
-
-    Args:
-        config (Dict): configuration file containing the minimum 
-            correlation of the squared returned with the vixm 
-            squared return consider to keep the series. 
-        vixm_ret (pd.Series): _description_
-        security_returns_df (pd.DataFrame): _description_
-        display_results (bool, optional): It will show the tail of the 
-            resulting dataframe if True. Defaults to False.
-    """
-    returns_squared_df = security_returns_df ** 2
-    vixm_ret2 = vixm_ret ** 2
-    returns_squared_and_vixm_ret_df = pd.concat(
-        [vixm_ret2,returns_squared_df], 
-        axis=1
-    )
-    returns_squared_component_df = correlation_filter(
-        returns_squared_and_vixm_ret_df, 
-        min_corr=config["min_corr"], 
-        key_column='VIXM_ret', # this is vixm ret squared
-        eliminate_first_column=True
-    )
-    X5 = returns_squared_component_df.add_suffix(
-        "_return_squared"
-    )
-    if display_results:
-        print(X5.tail())
-    print("Return squared calculation completed for componenent 5 (X5)")
-
-    return X5
-
-# Calculation of SPY volatility on varios windows
-def get_ticker_volatilities(
-    start_date_volatilities,
-    vixm,
-    ticker: str = 'spy',
-    end_date = None,
-    config = {},
-    display_results: bool = False
-):
-    end_date = end_date if end_date is not None else config['end_date']
-    close_price_ticker_df = retrieve_yahoo_close(
-        ticker,
-        start_date=start_date_volatilities,
-        end_date=end_date
-    )
-    close_price_ticker_df.to_csv(f"demo_data/adaboost_{ticker}_data.csv", index=True)
-
-    ticker_returns_df = close_price_ticker_df.pct_change()
-
-    # Calculates calculation
-    ticker_volatility = pd.DataFrame()
-    windows_for_lag = config['windows_for_volatility_lags']
-
-    for window_size in windows_for_lag:
-        column_name = f"{window_size}_{ticker}_rolling_volatility"
-        ticker_volatility[column_name] = ticker_returns_df.rolling(
-            window=window_size).std()
-
-    # Concatenate to vixm to uniform index
-    X8 = pd.concat([vixm, ticker_volatility], axis=1)
-    
-    # Fill missing data, and delete vixm, that was  used to uniform the index
-    X8 = X8.ffill()
-    X8 = X8.iloc[:, 1:]
-
-    # Setting for demo
-    if display_results:
-        print(X8.shape)
-        print(X8.tail())
-    print("Rolling volatilities component completed (X8)")
-    
-    return X8
+def retrieve_volume_multiple_tickers(
+    volume_list: List[str], start_date: str, end_date: str,
+    display_detailed_steps=True) -> Dict:
+    """Retrieves volume trades for a list of tickers."""
+    volume_dict = {}
+    for ticker in volume_list:
+        volume = retrieve_yahoo_volume(
+            ticker, start_date=start_date, end_date=end_date,
+            display_detailed_steps=display_detailed_steps)
+        volume_dict[ticker] = volume
+    volume_df = pd.DataFrame(volume_dict)
+    return volume_df
 
 
-# Calculation of day of the week effect
-# 0: Monday, 6: Sunday
-def get_day_of_week_component(
-    close_prices_df: pd.DataFrame,
-    display_results: bool = False
-):
-    """Add dummy features for each day of the week"""
-    date_idx_name = close_prices_df.index.name
-    # Calculate day of week for index dates (in "Date" column)
-    day_of_week_df = pd.DataFrame(
-        close_prices_df.index.dayofweek,
-        close_prices_df.index
-    )
-    # Transform day numbers to dummies
-    day_of_week_df = pd.concat(
-        [day_of_week_df, pd.get_dummies(day_of_week_df[date_idx_name])],
-        axis=1
-    )
-    # Drop "Date" col and rename dummy cols with day of the week
-    day_of_week_df.drop(columns=[date_idx_name], inplace=True)
-    day_of_week_df.columns = ["Mon", "Tue", "Wed","Thu","Fri"]
+def load_demo_volume(filepath: str = "demo_data/adaboost_volume.csv") -> pd.DataFrame:
+    """Loads volume data from a CSV file (demo mode)."""
+    return pd.read_csv(filepath, index_col="Date", parse_dates=True, infer_datetime_format=True)
 
-    if display_results:
-        print("day_of_week_df.shape: ", day_of_week_df.shape)
-        print("day_of_week_df.value_counts")
-        print(day_of_week_df.value_counts())
-        print("tail\n", day_of_week_df.tail())
-    print("Calculation of day of the week effect component (X10) completed.")
 
-    return day_of_week_df
+def process_volume_data(volume_dict: Dict) -> pd.DataFrame:
+    """Processes raw volume data into a forward-filled DataFrame."""
+    volume_df_raw = pd.DataFrame(volume_dict)
+    return volume_df_raw.ffill(axis='rows')
 
-# Calculation of the Month Effect Component
-def get_month_component(
-    close_prices_df: pd.DataFrame,
-    display_results: bool = False
-):
-    """Add dummy features with the month of the index
-    """
-    date_idx_name = close_prices_df.index.name
-    month_df = pd.DataFrame(
-        close_prices_df.index.month,
-        index=close_prices_df.index
-    )
-    # Transform columns to features columns signaling the month as boolean
-    month_df = pd.concat(
-        [month_df,pd.get_dummies(month_df[date_idx_name])],
-        axis=1
-    )
-    # Drop "Date" col and rename dummy cols with the month
-    month_df.drop(columns=[date_idx_name], inplace=True)
-    month_df.columns = ["Jan", "Feb", "Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
-
-    if display_results:
-        print("month_df.shape:", month_df.shape)
-        print("month_df value_counts")
-        print(month_df.value_counts())
-        print("tail\n", month_df.tail())
-    print("Calculation of day of the week effect component (X10) completed.")
-
-    return month_df
 
 
 

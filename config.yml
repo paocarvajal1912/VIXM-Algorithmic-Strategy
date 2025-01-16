@@ -1,6 +1,8 @@
 # Configuration File
 # VIXM Algoritmic Trading Signal
 
+data_folder: data
+
 # Key parameters of the model
 seed: 19
 start_date: 2011-01-05
