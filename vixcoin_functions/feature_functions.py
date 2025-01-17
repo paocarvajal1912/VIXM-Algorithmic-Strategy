@@ -69,6 +69,25 @@ def garch_fit_and_predict(series: pd.Series, ticker: str, horizon: int = 1,
 
     return serie_garch_before_shift
 
+def get_min_valid_date(df: pd.DataFrame) -> pd.Timestamp:
+    """
+    Identify the minimum date where all time series in a DataFrame have valid data.
+
+    Args:
+        df (pd.DataFrame): A DataFrame with time series data. The index should be of datetime type.
+
+    Returns:
+        pd.Timestamp: The earliest date where all columns have valid data (no NaN values).
+    """
+    if not isinstance(df.index, pd.DatetimeIndex):
+        raise ValueError("The DataFrame index must be a DatetimeIndex.")
+
+    valid_rows = df.dropna()
+    min_date = valid_rows.index.min()
+
+    return min_date
+
+
 # Calculation of security prices component X1
 def get_prices_component(
     close_prices_df: pd.DataFrame,
@@ -146,7 +165,7 @@ def get_return_component(
     )
 
     # The generation of a suffix is necesary when evaluating feature importance for time series identification
-    X2 = security_returns_component_df.add_suffix('_returns')
+    X2 = security_returns_component_df.add_suffix('_ret')
 
     if display_results:
         print("Last records of the second component X2:")
@@ -243,8 +262,9 @@ def get_return_squared(
         config (Dict): configuration file containing the minimum 
             correlation of the squared returned with the vixm 
             squared return consider to keep the series. 
-        vixm_ret (pd.Series): _description_
-        security_returns_df (pd.DataFrame): _description_
+        vixm_ret (pd.Series): series with daily returns of the VIXM ETF
+        security_returns_df (pd.DataFrame): dataframe with the returns of tickers
+            on config
         display_results (bool, optional): It will show the tail of the 
             resulting dataframe if True. Defaults to False.
     """
@@ -278,6 +298,9 @@ def get_ticker_volatilities(
     config: Dict = {},
     display_results: bool = False
 ):
+    """calculates volatilities for several different lags
+    for the SPY or desired ticker."""
+    
     ticker_returns_df = returns[ticker]
     
     # Calculates calculation
@@ -290,19 +313,19 @@ def get_ticker_volatilities(
             window=window_size).std()
 
     # Concatenate to vixm to uniform index
-    X8 = pd.concat([vixm, ticker_volatility], axis=1)
+    X6 = pd.concat([vixm, ticker_volatility], axis=1)
     
     # Fill missing data, and delete vixm, that was  used to uniform the index
-    X8 = X8.ffill()
-    X8 = X8.iloc[:, 1:]
+    X6 = X6.ffill()
+    X6 = X6.iloc[:, 1:]
 
     # Setting for demo
     if display_results:
-        print(X8.shape)
-        print(X8.tail())
-    print("Rolling volatilities component completed (X8)")
+        print(X6.shape)
+        print(X6.tail())
+    print("Rolling volatilities component completed (X6)")
     
-    return X8
+    return X6
 
 
 # Calculation of day of the week effect
@@ -365,3 +388,46 @@ def get_month_component(
     print("Calculation of day of the week effect component (X10) completed.")
 
     return month_df
+
+# Concatenating all components to get X
+def get_X(
+    X_components: Dict, 
+    config: Dict,
+    inclusion_list: List = ['all']):
+    """Concatenate the components to get the fetures matrix X"""
+    X_old = pd.DataFrame()
+    if inclusion_list == ['all']:
+        inclusion_list = list(config['component_names'].keys())
+        
+    for key, df in X_components.items():
+        if key in inclusion_list:
+            X = pd.concat([X_old, df], axis=1)
+            print(f"Component {key}: {config['component_names'][key]} included")
+            X_old = X
+    # Eliminating nulls for return calculatinos or lag windows
+    min_valid_date = get_min_valid_date(X)
+    X = X.loc[min_valid_date:]
+    
+    return X
+
+def setup_signal(X, config, display_results=False):
+    """Generate the trading signals 1 (entry for one day) 
+    or 0 (do not enter)"""
+    XY = X
+    XY["Signal"] = 0.0
+    XY.loc[(XY['VIXM_ret'] >= config['threshold']), 'Signal'] = 1
+
+    # Define the target set y using the Signal column
+    y = XY[["Signal"]]
+
+    if display_results:
+        print(XY[["Signal"]])
+        print("XY[['Signal']] value_counts")
+        print(XY[["Signal"]].value_counts())
+        print("XY.shape: ", XY.shape)
+        print(pd.concat([XY['VIXM_ret'],y], axis=1))
+    
+    return y, XY
+
+ 
+

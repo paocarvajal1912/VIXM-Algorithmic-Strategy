@@ -2,7 +2,10 @@ import matplotlib.pyplot as plt
 
 def plot_tickers_with_scaling(
     data, as_is_tickers, scaled_tickers=None, 
-    scaled_factors=None, key: str = "prices"
+    scaled_factors=None, key: str = "prices",
+    title=None,
+    wide=10,
+    height=5
     ):
     """
     Plot the relationship between multiple tickers' prices, with scaling for selected tickers.
@@ -39,11 +42,16 @@ def plot_tickers_with_scaling(
     all_tickers = as_is_tickers + scaled_tickers
 
     # Creating subplots
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    fig, ax = plt.subplots(1, 1, figsize=(wide, height))
 
     for i, ticker in enumerate(all_tickers):
-        if ticker not in data[key].columns:
-            raise ValueError(f"Ticker '{ticker}' not found in data['{key}'].")
+        if key is not None:
+            if ticker not in data[key].columns:
+                raise ValueError(f"Ticker '{ticker}' not found in data['{key}'].")
+        else:
+            if ticker not in data.columns:
+                raise ValueError(f"Ticker '{ticker}' not found in data.")
+
 
     # Get a color palette from matplotlib
     color_cycle = plt.cm.Set1.colors  # Tab10 colormap for distinct colors
@@ -55,26 +63,47 @@ def plot_tickers_with_scaling(
             factor_index = scaled_tickers.index(ticker)
             color = color_cycle[i % num_colors]
             factor = scaled_factors[factor_index]
-            ax.plot(
-                data[key].index,
-                factor * data[key][ticker],
-                label=f"{factor} * {ticker} Close Price",
-                color='orange'
-            )
+            if key is not None:
+                ax.plot(
+                    data[key].index,
+                    factor * data[key][ticker],
+                    label=f"{factor} * {ticker} Close Price",
+                    color='orange'
+                )
+            else:
+                ax.plot(
+                    data.index,
+                    factor * data[ticker],
+                    label=f"{factor} * {ticker} Close Price",
+                    color='orange'
+                )
     # Plot without scaling
     if len (as_is_tickers) > 0:
         for i, ticker in enumerate(as_is_tickers):
            color = color_cycle[(len(scaled_tickers) + i) % num_colors]
-           ax.plot(
-               data[key].index,
-               data[key][ticker],
-               label=f"{ticker} Close Price",
-               color=color
-           )
-
-    ax.set_title(f"Plot of Ticker {key.capitalize()}")
+           if key is not None:
+                ax.plot(
+                    data[key].index,
+                    data[key][ticker],
+                    label=f"{ticker} Close Price",
+                    color=color
+                )
+           else:
+               ax.plot(
+                    data.index,
+                    data[ticker],
+                    label=f"{ticker} Close Price",
+                    color=color
+                )
+    if key is not None and title is None:
+        ax.set_title(f"Plot of Ticker {key.capitalize()}")
+    elif title is not None:
+        ax.set_title(title)
+    else:
+        ax.set_title(f"Plot of time series for {as_is_tickers} and {scaled_tickers}")
     ax.set_xlabel("Date")
-    ax.set_ylabel(f"{key.capitalize()}")
+    if key is not None:
+        ax.set_ylabel(f"{key.capitalize()}")
     ax.legend()
     ax.grid(True)
 

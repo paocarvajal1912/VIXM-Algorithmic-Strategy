@@ -9,7 +9,7 @@ start_date: 2011-01-05
 end_date: 2025-01-05
 
 # Min return to set up a positive signal
-threshold: 0.00 
+threshold: 0.02 
 
 # Min correlation with the VIXM to keep the series
 key_column: VIXM
@@ -77,7 +77,16 @@ windows_for_volatility_lags: # in days
     - 180
     - 200
     - 260
-  
+component_names:
+    1: prices
+    2: return
+    3: volume
+    4: garch
+    5: return_squared
+    6: spy_volatilities_lags
+    10: day-of_week_effect
+    11: month_effect
+    
 
 #Some of the less familiar tickers are listed below, together with others that can be good to try again in the future
 #Bristol-Myers Squibb Company (BMY)
