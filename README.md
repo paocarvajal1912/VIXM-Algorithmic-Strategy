@@ -1,6 +1,6 @@
 # VIXM Algorithmic Trading Strategy
 An algorithmic trading strategy incursion to create the first volatility security suitable for long term investors.
-This is a work in process, and here we centered in showing important features.
+This is a work in progress, and here we centered in showing important features.
 
 <div id="top"></div>
 
