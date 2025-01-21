@@ -5,7 +5,22 @@ from typing import List, Dict, Tuple
 from datetime import datetime, timedelta
 import pandas as pd
 import yfinance as yf
-import numpy as np
+import yaml
+
+def upload_configuration(configpath: str = 'config.yml' , display_configuration: bool = False):
+    """Upload and optionally display configuration"""
+    
+    # Load the YAML configuration file
+    with open(configpath, 'r') as file:
+        config = yaml.safe_load(file)
+
+    # Display the configuration
+    if display_configuration:
+        print("Configuration loaded:")
+        for key, value in config.items():
+            print(f"{key}: {value}")
+    print("Configuration uploaded succesfully")
+    return config
 
 def load_data(config: Dict, display_detailed_steps=False):
     """retrieve prices and volume from yahoo finance for ticker list
