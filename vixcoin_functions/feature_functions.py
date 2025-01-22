@@ -1,4 +1,8 @@
 
+"""
+Functions to generate all feature components of the
+VIXM algoritmic strategy
+"""
 from typing import List, Dict
 import pandas as pd
 from arch import arch_model
@@ -150,12 +154,18 @@ def get_return_component(
     """Filter returns that are relevant
 
     Args:
-        close_prices_df (pd.DataFrame): _description_
-        config (Dict): _description_
-        display_results (bool, optional): _description_. Defaults to False.
+        dily_returns_df (pd.DataFrame): a dataframe containing daily returns
+            in its columns, and the ticker as column names
+        config (Dict): a dictionary containing the value of the minimum correlation
+            needed between a security returns and the VIXM return
+            in order to include in the output.
+        display_results (bool, optional): wheter to show outputs
+            of the last records, the column names, and the excluded
+            securities due too correlation.
 
     Returns:
-        _type_: _description_
+        pd.DataFrame: a dataframe with the returns of securities
+            that have some minimal correlation with VIXM returns.
     """
     security_returns_component_df = correlation_filter(                            
         daily_returns_df.copy(), 
@@ -186,9 +196,10 @@ def get_volume_component(
     vixm_ret: pd.Series,
     display_results: bool = False
     ):
-    """
-    
-    """
+    """Filter volumes of securities having a minimal correlation
+    over returns with VIXM.
+    Returns a dataframe with volumne, and column names suffixed
+    with the word '_volume'"""
     volume_df_with_vixm = pd.concat([vixm_ret, volume_df], axis=1)
 
     volume_component_df = correlation_filter(
@@ -364,8 +375,7 @@ def get_month_component(
     close_prices_df: pd.DataFrame,
     display_results: bool = False
 ):
-    """Add dummy features with the month of the index
-    """
+    """Add dummy features with the month of the index"""
     date_idx_name = close_prices_df.index.name
     month_df = pd.DataFrame(
         close_prices_df.index.month,

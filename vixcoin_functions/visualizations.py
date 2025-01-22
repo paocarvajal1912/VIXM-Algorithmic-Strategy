@@ -1,3 +1,7 @@
+"""
+Functions to generate visualizations for the
+VIXM algorithmic strategy
+"""
 import matplotlib.pyplot as plt
 
 def plot_tickers_with_scaling(
