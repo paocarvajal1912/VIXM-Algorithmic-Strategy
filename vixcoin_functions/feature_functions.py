@@ -431,13 +431,44 @@ def setup_signal(X, config, display_results=False):
     y = XY[["Signal"]]
 
     if display_results:
-        print(XY[["Signal"]])
-        print("XY[['Signal']] value_counts")
+        print("Signal value_counts:")
         print(XY[["Signal"]].value_counts())
-        print("XY.shape: ", XY.shape)
-        print(pd.concat([XY['VIXM_ret'],y], axis=1))
+        print("\nXY.shape: ", XY.shape)
+        print("\nVIXM return and signal slide:\n",pd.concat([XY['VIXM_ret'],y], axis=1))
     
     return y, XY
+
+
+def shift_signal_for_prediction(
+    XY:pd.DataFrame, 
+    signal_colname="Signal",
+    display_results=False):
+    """
+    We move back y to the past in one day, so X from yesterday will predict y today.
+    This function also calculates X, y and the prediction vector, which is the last 
+    day data.
+    """
+
+    XY["Signal"] = y = XY["Signal"].shift(-1)
+    prediction_vector = XY.tail(1).iloc[:,:-1]
+
+    if display_results:
+        print("Signal prior to shift")
+        print(XY[["VIXM_ret", "Signal"]])
+        print("Prediction vector (last row without signal): \n", prediction_vector)
+
+    # Make sure there are not unexpected nulls other than the shifted signal
+    if not XY.iloc[:-1, :].equals(XY.dropna()):
+        total_nulls = XY.isnull().sum().sum()
+        raise ValueError(f"There are {total_nulls} nulls when only one is expected.")
+    else:
+        # Dropping the last row, which has the only expected null due to the shift
+        XY = XY.dropna()
+        X = XY.iloc[:,:-1].copy()
+        y = XY[signal_colname].copy()
+        if display_results:
+            print("XY After shift and elimination of prediction vector:\n", XY)
+    return X, y, prediction_vector
 
  
 

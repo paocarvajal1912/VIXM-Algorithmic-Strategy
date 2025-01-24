@@ -24,8 +24,8 @@ max_depth: 2
 learning_rate_adaboost: 1.7 
 
 # Inclusion of the first ppal components lagged
-number_of_pca_lag_component_to_include: 5
-num_pca_components: 40
+num_pca_components: 6  # n
+num_lags_to_include: 5  # t
 
 # Definition of demo mode or development mode
 demo_mode: False

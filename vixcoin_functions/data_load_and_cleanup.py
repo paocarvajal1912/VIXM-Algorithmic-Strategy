@@ -1,4 +1,6 @@
-# Functions to load and clean data for the VIXM strategy
+"""
+Functions to load and clean data for the VIXM strategy
+"""
 import os
 import pandas as pd
 from typing import List, Dict, Tuple
