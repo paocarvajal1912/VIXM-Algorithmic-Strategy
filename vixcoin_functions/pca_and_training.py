@@ -3,7 +3,6 @@ from typing import List, Dict, Tuple
 import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import DateOffset
-from imblearn.over_sampling import RandomOverSampler
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
