@@ -32,6 +32,9 @@ demo_mode: False
 tuning_mode: True
 run_multiple_tuning_iterations: False
 
+# plots
+use_hvplot: True #use as True if 
+
 # Ticker List: key_column (defined above) (ie.VIXM) must be placed in first position
 ticker_list:
   - VIXM

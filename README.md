@@ -1,6 +1,6 @@
 # VIXM Algorithmic Trading Strategy
 An algorithmic trading strategy incursion to create the first volatility security suitable for long term investors.
-This is a work in progress, and here we centered in showing important features.
+The VIXM algorithmic strategy demonstrates potential for mitigating the decay of the VIXM instrument by leveraging machine learning techniques. 
 
 <div id="top"></div>
 
@@ -83,13 +83,13 @@ Alternatively, you can jump straight to the demo section and test out the wesbit
 <!-- USAGE-->
 ## Usage
 
-The main file `vixm_adaboost_model.ipynb` is a Jupyter Notebook with a pre-run code. You can go through it and see code as well as results. 
+The main file `vixm_adaboost_model_model_evaluation.ipynb` is a Jupyter Notebook with a pre-run code. You can go through it and see code as well as results. 
 
 If you look to reuse the code, and do not have experience on jupyter lab, you can refer [this tutorial.](https://www.dataquest.io/blog/jupyter-notebook-tutorial)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
-## Conclusions
+## Best Features for VIXM Investment Strategy
 
 ![Best features](images/feature_importance_plot.png)
 
@@ -123,19 +123,37 @@ The final list of features is as follows:
  * Month-of-the-year seasonality
  * A custom number of principal components lagged on 1, 2, 3, 4 and 5 days representing historical movements
  
-Several functions have been defined in two files:
- > `vixcoin_functions/feature_functions.py` and  
- > `vixcoin_functions/pca_and_training.py`
+Several functions have been defined in four modules:
+ > data_load_and_cleanup
+ > feature_functions
+ > pca_and_training
+ > visualizationsx
  
 The model applied is the `Adaboost` Model. The investment strategy consist in an algorithmic trading that follows the signals from the model, which are  0 and 1 daily. The strategy buys VIXM when the signal is 1, and sell VIXM when the signal comes back to 0.
 
 The code includes analysis of.
     
     * profitability of the strategy
-    * accuracy
-    * feature importance and 
-    * adaboost tuning tools
+    * performan report
+    * feature importance
 
+These first results show that the VIXM algorithmic strategy has potential for mitigating the decay of the VIXM instrument. There are several areas for improvement to enhance its effectiveness:
+
+1. **Feature Selection and Hyperparameter Tuning**:
+   The strategy could benefit from a more rigorous application of feature selection and hyperparameter optimization to improve its predictive performance and robustness.
+
+2. **Performance on Training and Adjacent Data**:
+   The strategy performs exceptionally well on the training data and shows promising results on data close to the training window. This indicates its ability to capture short-term patterns effectively.
+
+<img src="images/InSampleGrowth.png" alt="Logo" width="1000" height="500">
+<p align="right">(<a href="#top">back to top</a>)</p>
+   
+
+3. **Limitations with Out-of-Sample Data**:
+   As the time horizon extends further from the training window, the strategy's performance begins to degrade. This suggests the need for improvements to generalize the model to new, unseen data. Here is where the feature selection and hyperparameter tuning will provide improvement.
+ 
+<img src="images/OutOfSampleGrowth.png" alt="Logo" width="1000" height="500">
+<p align="right">(<a href="#top">back to top</a>)</p>
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>

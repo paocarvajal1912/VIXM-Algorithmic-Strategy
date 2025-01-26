@@ -84,7 +84,8 @@ def adaboost_pca(
     X_test: pd.DataFrame,
     idx: pd.Index,
     num_pca_components: int = 40,
-    display_results: bool = False
+    display_results: bool = False,
+    include_df_output: bool = False
 ) -> pd.DataFrame:
     """
     Applies PCA on training and testing data and returns principal components.
@@ -123,6 +124,7 @@ def adaboost_pca(
         plt.xlabel("Principal Component")
         plt.show()
         print(f"Principal components shape: {principal_components_df.shape}")
+    if include_df_output:
         print(principal_components_df.head())
 
     return principal_components_df
@@ -252,7 +254,8 @@ def concat_pca_to_X(
 
 def add_pca(X: pd.DataFrame, y: pd.DataFrame, 
     training_period_months: int, t: int = 5, n_components: int = 6,
-    scaler_type: str = 'MinMaxScaler', display_results: bool = False
+    scaler_type: str = 'MinMaxScaler', display_results: bool = False,
+    include_df_output: bool = False
 ):
     """
     Add t days of n principal components to the data.
@@ -278,12 +281,12 @@ def add_pca(X: pd.DataFrame, y: pd.DataFrame,
     X_pca_lag = get_lagged_pca(
         principal_components_train_test_df,
         num_lags_to_include=t,
-        display_results=display_results
+        display_results=include_df_output
     )
     X_pc = concat_pca_to_X(
         X=X,
         X_pca_lag=X_pca_lag,
-        display_results=display_results
+        display_results=include_df_output
     )
     assert X.shape[0] - X_pc.shape[0] == t, f"The number of rows removed is different than the lags: {t}"
     y_pc = y.loc[X_pc.index]
