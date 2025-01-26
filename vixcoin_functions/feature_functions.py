@@ -73,6 +73,7 @@ def garch_fit_and_predict(series: pd.Series, ticker: str, horizon: int = 1,
 
     return serie_garch_before_shift
 
+
 def get_min_valid_date(df: pd.DataFrame) -> pd.Timestamp:
     """
     Identify the minimum date where all time series in a DataFrame have valid data.
@@ -170,7 +171,7 @@ def get_return_component(
     security_returns_component_df = correlation_filter(                            
         daily_returns_df.copy(), 
         min_corr=config["min_corr"], 
-        key_column='VIXM', # VIXM col will have the return oof VIXM
+        key_column=config['key_column'], # ie VIXM col will have the return of VIXM
         eliminate_first_column=False
     )
 
@@ -193,22 +194,24 @@ def get_return_component(
 def get_volume_component(
     volume_df: pd.DataFrame,
     config: Dict,
-    vixm_ret: pd.Series,
+    vixm: pd.Series,
     display_results: bool = False
     ):
     """Filter volumes of securities having a minimal correlation
     over returns with VIXM.
     Returns a dataframe with volumne, and column names suffixed
     with the word '_volume'"""
-    volume_df_with_vixm = pd.concat([vixm_ret, volume_df], axis=1)
-
+    
+    volume_df = volume_df.add_suffix("_volume")
+    volume_df_with_vixm = pd.concat([vixm, volume_df], axis=1)
+    
     volume_component_df = correlation_filter(
         volume_df_with_vixm, 
-        min_corr=config["min_corr"], 
-        key_column='VIXM_ret', 
+        min_corr=config['min_corr'], 
+        key_column=config['key_column'], 
         eliminate_first_column=True 
     )
-    X3 = volume_component_df.add_suffix("_volume").copy()
+    X3 = volume_component_df.copy()
 
     if display_results:
         print("Last columns of the component")
@@ -285,10 +288,11 @@ def get_return_squared(
         [vixm_ret2,returns_squared_df], 
         axis=1
     )
+    key_ticker_return_col_name = f"{config['key_column']}_ret"
     returns_squared_component_df = correlation_filter(
         returns_squared_and_vixm_ret_df, 
         min_corr=config["min_corr"], 
-        key_column='VIXM_ret', # this is vixm ret squared
+        key_column=key_ticker_return_col_name, # this is vixm ret squared
         eliminate_first_column=True
     )
     X5 = returns_squared_component_df.add_suffix(
@@ -420,12 +424,14 @@ def get_X(
     
     return X
 
-def setup_signal(X, config, display_results=False):
+def setup_signal(X: pd.DataFrame,
+        config, display_results=False):
     """Generate the trading signals 1 (entry for one day) 
     or 0 (do not enter)"""
     XY = X
     XY["Signal"] = 0.0
-    XY.loc[(XY['VIXM_ret'] >= config['threshold']), 'Signal'] = 1
+    config_key_col = f"{config['key_column']}_ret"
+    XY.loc[XY[config_key_col] >= config['threshold'], 'Signal'] = 1
 
     # Define the target set y using the Signal column
     y = XY[["Signal"]]
@@ -434,13 +440,14 @@ def setup_signal(X, config, display_results=False):
         print("Signal value_counts:")
         print(XY[["Signal"]].value_counts())
         print("\nXY.shape: ", XY.shape)
-        print("\nVIXM return and signal slide:\n",pd.concat([XY['VIXM_ret'],y], axis=1))
+        print("\nVIXM return and signal slide:\n",pd.concat([XY[config_key_col],y], axis=1))
     
     return y, XY
 
 
 def shift_signal_for_prediction(
-    XY:pd.DataFrame, 
+    XY:pd.DataFrame,
+    config: Dict,
     signal_colname="Signal",
     display_results=False):
     """
@@ -450,25 +457,24 @@ def shift_signal_for_prediction(
     """
 
     XY["Signal"] = y = XY["Signal"].shift(-1)
-    prediction_vector = XY.tail(1).iloc[:,:-1]
-
+    
+    config_key_col = f"{config['key_column']}_ret"
     if display_results:
         print("Signal prior to shift")
-        print(XY[["VIXM_ret", "Signal"]])
-        print("Prediction vector (last row without signal): \n", prediction_vector)
+        print(XY[[config_key_col, "Signal"]])
 
     # Make sure there are not unexpected nulls other than the shifted signal
     if not XY.iloc[:-1, :].equals(XY.dropna()):
         total_nulls = XY.isnull().sum().sum()
         raise ValueError(f"There are {total_nulls} nulls when only one is expected.")
     else:
-        # Dropping the last row, which has the only expected null due to the shift
-        XY = XY.dropna()
+        # Filling last row signal with 99, which has the only expected null due to the shift
+        XY = XY.fillna(99)
         X = XY.iloc[:,:-1].copy()
         y = XY[signal_colname].copy()
         if display_results:
-            print("XY After shift and elimination of prediction vector:\n", XY)
-    return X, y, prediction_vector
+            print("XY After shift:\n", XY)
+    return X, y
 
  
 

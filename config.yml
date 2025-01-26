@@ -4,27 +4,27 @@
 data_folder: data
 
 # Key parameters of the model
+key_column: VIXM
 seed: 19
 start_date: 2011-01-05
 end_date: 2025-01-05
 
 # Min return to set up a positive signal
-threshold: 0.02 
+threshold: 0.001004
 
-# Min correlation with the VIXM to keep the series
-key_column: VIXM
-min_corr: 0.05 
+# Min correlation with the key_column (ie. VIXM) to keep the series
+min_corr: 0.05
 
 # Split of data
-training_period_months: 120 
+training_period_months: 136 
 
 # Adaboost parameters
-adaboost_estimators: 6 
-max_depth: 2
-learning_rate_adaboost: 1.7 
+adaboost_estimators: 10 
+max_depth: 10
+learning_rate_adaboost: 1
 
 # Inclusion of the first ppal components lagged
-num_pca_components: 6  # n
+num_pca_components: 40  # n
 num_lags_to_include: 5  # t
 
 # Definition of demo mode or development mode
@@ -32,11 +32,12 @@ demo_mode: False
 tuning_mode: True
 run_multiple_tuning_iterations: False
 
-# Ticker List: VIXM must be in first position
+# Ticker List: key_column (defined above) (ie.VIXM) must be placed in first position
 ticker_list:
   - VIXM
   - ^VIX
   - SPY
+  - VIXY
   - GBPUSD=X
   - BRLUSD=X
   - DX-Y.NYB

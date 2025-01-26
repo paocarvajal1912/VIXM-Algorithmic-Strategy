@@ -41,7 +41,7 @@ def split_training_test_data(
         print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
         print("y_train value counts:")
         print(y_train.value_counts())
-    print("Time series data split completed")
+    print("Time series data split completed \n")
 
     return X_train, y_train, X_test, y_test
 
@@ -250,44 +250,17 @@ def concat_pca_to_X(
     return X_pca
 
 
-def eliminate_nans_in_pca_data(
-    X_pc: pd.DataFrame,
-    y: pd.Series,
-    n: int = 5,
-    tuning_mode: bool = True
-) -> Tuple[pd.DataFrame, pd.Series]:
-    """
-    Removes the first `n` rows of missing values from the feature and target data.
-
-    Args:
-        X_pc (pd.DataFrame): DataFrame containing PCA features.
-        y (pd.Series): Target signal Series.
-        n (int): Number of rows to remove (default is 5).
-        tuning_mode (bool): Print additional information if True (default True).
-
-    Returns:
-        Tuple: Cleaned X and y data.
-    """
-    X_pc_cleaned = X_pc.iloc[n:]#.reset_index(drop=drop_index)
-    y_cleaned = y.iloc[n:]#.reset_index(drop=drop_index)
-    #y_cleaned.index = X_pc_cleaned.index
-
-    if tuning_mode:
-        print(f"Cleaned X shape: {X_pc_cleaned.shape}, Cleaned y shape: {y_cleaned.shape}")
-        print(X_pc_cleaned.head())
-        print(f"Cleaned y shape: {y.shape}, Cleaned y shape: {y.shape}")
-        print(y.head())
-
-    return X_pc_cleaned, y_cleaned
-
-
-def add_pca(X: pd.DataFrame, X_train: pd.DataFrame, X_test: pd.DataFrame, 
-    t: int = 5, n_components: int = 6, scaler_type: str = 'MinMaxScaler',
-    display_results: bool = False
+def add_pca(X: pd.DataFrame, y: pd.DataFrame, 
+    training_period_months: int, t: int = 5, n_components: int = 6,
+    scaler_type: str = 'MinMaxScaler', display_results: bool = False
 ):
     """
     Add t days of n principal components to the data.
     """ 
+    X_train, _ , X_test, _ = split_training_test_data(
+        X, y, training_period_months=training_period_months, 
+        display_results=display_results
+    )
     # Scaling of the data
     X_train_scaled, X_test_scaled = scale(
         X_train, X_test, scaler_type=scaler_type, display_results=display_results)
@@ -313,14 +286,27 @@ def add_pca(X: pd.DataFrame, X_train: pd.DataFrame, X_test: pd.DataFrame,
         display_results=display_results
     )
     assert X.shape[0] - X_pc.shape[0] == t, f"The number of rows removed is different than the lags: {t}"
-    print("The lagged principal components have been succesfully added to the features matrix X.")
-    return X_pc
+    y_pc = y.loc[X_pc.index]
+    
+    # Extraction of last day (today) data to predict next day (tomoorrow)
+    prediction_vector = pd.DataFrame(X_pc.iloc[-1,:].copy()).T
+    X_pc = X_pc.iloc[:-1,:]
+    
+    y_pc = y_pc[:-1]
+    print("""
+        The lagged principal components have been succesfully added to the features matrix X, 
+        the y component was trunc to match X's index,
+        and the prediction vector was extracted for tomorrow signal.
+    """
+    )
+    return X_pc, y_pc, prediction_vector
 
 
 def random_over_sample(
     X_train: pd.DataFrame,
     y_train: pd.DataFrame,
-    tuning_mode: bool = True
+    random_state: int = 19,
+    display_results: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Applies random oversampling to balance the target classes in the training data.
@@ -334,10 +320,10 @@ def random_over_sample(
         Tuple: Resampled X_train and y_train.
     """
     
-    ros = RandomOverSampler(random_state=1)
-    X_train_resampled, y_train_resampled = ros.fit_resample(X_train,y_train)
+    ros = RandomOverSampler(random_state=random_state)
+    X_train_resampled, y_train_resampled = ros.fit_resample(X_train, y_train)
 
-    if tuning_mode == True:
-        print(f"y_train_resampled value_counts: {y_train_resampled.value_counts()}")
+    if display_results == True:
+        print(f"y_train_resampled value_counts: \n{y_train_resampled.value_counts()}")
         
     return X_train_resampled, y_train_resampled

@@ -66,20 +66,21 @@ def plot_tickers_with_scaling(
         for i, ticker in enumerate(scaled_tickers):
             factor_index = scaled_tickers.index(ticker)
             color = color_cycle[i % num_colors]
+            print(color)
             factor = scaled_factors[factor_index]
             if key is not None:
                 ax.plot(
                     data[key].index,
                     factor * data[key][ticker],
                     label=f"{factor} * {ticker} Close Price",
-                    color='orange'
+                    color=color
                 )
             else:
                 ax.plot(
                     data.index,
                     factor * data[ticker],
                     label=f"{factor} * {ticker} Close Price",
-                    color='orange'
+                    color=color
                 )
     # Plot without scaling
     if len (as_is_tickers) > 0:
